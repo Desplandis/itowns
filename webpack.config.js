@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const webpack = require('webpack');
 const ESLintPlugin = require('eslint-webpack-plugin');
 
 const mode = process.env.NODE_ENV;
@@ -80,9 +81,17 @@ module.exports = () => {
                 },
             ],
         },
-        plugins: [new ESLintPlugin({
-            files: include,
-        })],
+        plugins: [
+            new ESLintPlugin({
+                files: include,
+            }),
+            // Prevent the generation of module fs for import on copc dependency
+            // See https://webpack.js.org/plugins/ignore-plugin/
+            new webpack.IgnorePlugin({
+                resourceRegExp: /^fs$/,
+                contextRegExp: /copc/,
+            }),
+        ],
         devServer: {
             devMiddleware: {
                 publicPath: '/dist/',
