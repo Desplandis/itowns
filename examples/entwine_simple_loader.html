@@ -56,6 +56,7 @@
 
                 camera.position.copy(position);
                 camera.lookAt(lookAt);
+                camera.updateProjectionMatrix();
 
                 controls.options.moveSpeed = size.length();
 
@@ -81,8 +82,10 @@
                 eptSource = new itowns.EntwinePointTileSource({ url });
 
                 if (eptLayer) {
-                    view.removeLayer('ept');
+                    debugGui.removeFolder(eptLayer.debugUI);
+                    view.removeLayer('Entwine Point Tile');
                     view.notifyChange();
+                    eptLayer.delete();
                 }
 
                 eptLayer = new itowns.EntwinePointTileLayer('Entwine Point Tile', {
