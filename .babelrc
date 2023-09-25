@@ -21,6 +21,7 @@
                 }
             }]
         }],
-        ["minify-dead-code-elimination"]
+        ["minify-dead-code-elimination"],
+        ["./plugins/babel-worker.mjs"]
     ]
 }
