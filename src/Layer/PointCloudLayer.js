@@ -32,7 +32,7 @@ function computeScreenSpaceError(context, pointSize, spacing, elt, distance) {
     }
     const pointSpacing = spacing / 2 ** elt.depth;
     // Estimate the onscreen distance between 2 points
-    const onScreenSpacing = context.camera.preSSE * pointSpacing / distance;
+    const onScreenSpacing = context.camera._preSSE * pointSpacing / distance;
     // [  P1  ]--------------[   P2   ]
     //     <--------------------->      = pointsSpacing (in world coordinates)
     //                                  ~ onScreenSpacing (in pixels)
@@ -221,6 +221,7 @@ class PointCloudLayer extends GeometryLayer {
         elt.visible = false;
 
         if (this.octreeDepthLimit >= 0 && this.octreeDepthLimit < elt.depth) {
+            console.log('Outside of depthLimit');
             markForDeletion(elt);
             return;
         }
@@ -229,6 +230,7 @@ class PointCloudLayer extends GeometryLayer {
         const bbox = (elt.tightbbox ? elt.tightbbox : elt.bbox);
         elt.visible = context.camera.isBox3Visible(bbox, this.object3d.matrixWorld);
         if (!elt.visible) {
+            console.log('Outside of view frustrum');
             markForDeletion(elt);
             return;
         }
@@ -288,9 +290,10 @@ class PointCloudLayer extends GeometryLayer {
         if (elt.children && elt.children.length) {
             const distance = bbox.distanceToPoint(point);
             elt.sse = computeScreenSpaceError(context, layer.pointSize, layer.spacing, elt, distance) / this.sseThreshold;
-            if (elt.sse >= 1) {
+            if (elt.sse >= this.sseThreshold) {
                 return elt.children;
             } else {
+                console.log('Outside of SSE');
                 for (const child of elt.children) {
                     markForDeletion(child);
                 }
@@ -308,6 +311,7 @@ class PointCloudLayer extends GeometryLayer {
             }
         }
 
+        console.log('postUpdate', this.displayedCount);
         if (this.displayedCount > this.pointBudget) {
             // 2 different point count limit implementation, depending on the potree source
             if (this.supportsProgressiveDisplay) {
@@ -349,6 +353,7 @@ class PointCloudLayer extends GeometryLayer {
         const now = Date.now();
         for (let i = this.group.children.length - 1; i >= 0; i--) {
             const obj = this.group.children[i];
+            // TODO: Parameter or const for magic value 10s before dispose
             if (!obj.visible && (now - obj.userData.node.notVisibleSince) > 10000) {
                 // remove from group
                 this.group.children.splice(i, 1);
