@@ -1,0 +1,73 @@
+<html>
+    <head>
+        <title>Itowns - Loaders.gl</title>
+
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link rel="stylesheet" type="text/css" href="css/example.css">
+        <link rel="stylesheet" type="text/css" href="css/LoadingScreen.css">
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script>
+    </head>
+    <body>
+        <div id="viewerDiv"></div>
+
+        <!-- Import iTowns source code -->
+        <script src="../dist/itowns.js"></script>
+        <script src="../dist/debug.js"></script>
+        <!-- Import iTowns LoadingScreen and GuiTools plugins -->
+        <script src="js/GUI/GuiTools.js"></script>
+
+
+        <script type="text/javascript">
+
+            const url = new URLSearchParams(window.location.search).get('tileset')
+                || 'https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/master/1.0/TilesetWithDiscreteLOD/tileset.json';
+
+
+            // ---------- CREATE A GlobeView FOR SUPPORTING DATA VISUALIZATION : ----------
+
+            const placement = {
+                coord: new itowns.Coordinates('EPSG:4326', -75.6114, 40.03428),
+                range: 4000,
+                tilt: 22,
+                heading: 180
+            }
+            const viewerDiv = document.getElementById('viewerDiv');
+
+            const view = new itowns.GlobeView(viewerDiv, placement);
+
+            const debugMenu = new GuiTools('menuDiv', view);
+
+
+
+            // ---------- ADD SOME WIDGETS : ----------
+
+            const C3DTilesSource = new itowns.C3DTilesSource({
+                url,
+            });
+
+            const C3DTilesLayer = new itowns.C3DTilesLayer(
+                '3d-tiles-layer',
+                {
+                    sseThreshold: 0.05,
+                    source: C3DTilesSource,
+                },
+                view,
+            );
+
+            itowns.View.prototype.addLayer.call(view, C3DTilesLayer);
+
+
+
+            // ---------- DEBUG TOOLS : ----------
+
+            debug.createTileDebugUI(debugMenu.gui, view);
+            debug.create3dTilesDebugUI(debugMenu.gui, view, C3DTilesLayer);
+
+
+
+        </script>
+    </body>
+</html>
