@@ -34,6 +34,7 @@ class C3DTileset {
     constructor(json, baseURL, registeredExtensions) {
         this.type = C3DTilesTypes.tileset;
 
+        this.loader = json.loader;
         this.asset = json.asset;
         this.properties = json.properties;
         this.geometricError = json.geometricError;

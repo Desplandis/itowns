@@ -228,6 +228,8 @@ export function computeNodeSSE(camera, node) {
 }
 
 export function init3dTilesLayer(view, scheduler, layer, rootTile) {
+    console.log('Tileset : ', layer.tileset);
+
     return requestNewTile(view, scheduler, layer, rootTile, undefined, true).then(
         (tile) => {
             layer.object3d.add(tile);

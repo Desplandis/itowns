@@ -8,6 +8,27 @@ import { PNTS_MODE, PNTS_SHAPE, PNTS_SIZE_MODE } from 'Renderer/PointsMaterial';
 import Style from 'Core/Style';
 import C3DTFeature from 'Core/3DTiles/C3DTFeature';
 import { optimizeGeometryGroups } from 'Utils/ThreeUtils';
+import { Tileset3D, Tile3D, TILE_TYPE } from '@loaders.gl/tiles';
+import {
+    CullingVolume,
+    Plane,
+    _PerspectiveFrustum as PerspectiveFrustum,
+} from '@math.gl/culling';
+import { GLTFLoader } from 'ThreeExtended/loaders/GLTFLoader';
+
+/** @typedef {import('../Core/View').default} View */
+/**
+ * @typedef {Object} GLTF
+ * @property {THREE.Group} scene
+ */
+
+/**
+ * @typedef {Object} Context
+ * @property {Object} camera
+ * @property {THREE.PerspectiveCamera} camera.camera3D
+ * @property {number} camera.width
+ * @property {number} camera.height
+ */
 
 export const C3DTILES_LAYER_EVENTS = {
     /**
@@ -26,7 +47,31 @@ export const C3DTILES_LAYER_EVENTS = {
     ON_TILE_REQUESTED: 'on-tile-requested',
 };
 
-const update = process3dTilesNode();
+const gltfLoader = new GLTFLoader();
+const matrixChangeUpVectorZtoY = (new THREE.Matrix4()).makeRotationX(Math.PI / 2);
+
+/**
+ * @param {Tile3D} tile
+ */
+async function loadMesh(tile) {
+    return new Promise((resolve /* , reject */) => {
+        const transform = new THREE.Matrix4().fromArray(tile.computedTransform);
+        transform.multiply(matrixChangeUpVectorZtoY);
+
+        const onLoad = (/** @type {GLTF} */ gltf) => {
+            const tileContent = gltf.scene;
+            tileContent.visible = true;
+            tileContent.applyMatrix4(transform);
+            resolve(gltf.scene);
+        };
+
+        gltfLoader.parse(
+            tile.content.gltfArrayBuffer,
+            tile.contentUrl ? tile.contentUrl.substr(0, tile.contentUrl.lastIndexOf('/') + 1) : '',
+            onLoad,
+        );
+    });
+}
 
 /**
  * Find tileId of object
@@ -60,7 +105,6 @@ class C3DTilesLayer extends GeometryLayer {
     /**
      * Constructs a new instance of 3d tiles layer.
      * @constructor
-     * @extends GeometryLayer
      *
      * @example
      * // Create a new 3d-tiles layer from a web server
@@ -88,7 +132,7 @@ class C3DTilesLayer extends GeometryLayer {
      * {@link View} that already has a layer going by that id.
      * @param      {object}  config   configuration, all elements in it
      * will be merged as is in the layer.
-     * @param {C3TilesSource} config.source The source of 3d Tiles.
+     * @param {C3DTilesSource} config.source The source of 3d Tiles.
      *
      * name.
      * @param {Number} [config.sseThreshold=16] The [Screen Space Error](https://github.com/CesiumGS/3d-tiles/blob/main/specification/README.md#geometric-error)
@@ -171,58 +215,157 @@ class C3DTilesLayer extends GeometryLayer {
 
         const resolve = this.addInitializationStep();
 
-        this.source.whenReady.then((tileset) => {
-            this.tileset = new C3DTileset(tileset, this.source.baseUrl, this.registeredExtensions);
-            // Verify that extensions of the tileset have been registered in the layer
-            if (this.tileset.extensionsUsed) {
-                for (const extensionUsed of this.tileset.extensionsUsed) {
-                    // if current extension is not registered
-                    if (!this.registeredExtensions.isExtensionRegistered(extensionUsed)) {
-                        // if it is required to load the tileset
-                        if (this.tileset.extensionsRequired &&
-                            this.tileset.extensionsRequired.includes(extensionUsed)) {
-                            console.error(
-                                `3D Tiles tileset required extension "${extensionUsed}" must be registered to the 3D Tiles layer of iTowns to be parsed and used.`);
-                        } else {
-                            console.warn(
-                                `3D Tiles tileset used extension "${extensionUsed}" must be registered to the 3D Tiles layer of iTowns to be parsed and used.`);
-                        }
+        const tileOptions = {
+            contentLoader: async (/** @type {Tile3D} */ tile) => {
+                let object3d = null;
+                switch (tile.type) {
+                    case TILE_TYPE.POINTCLOUD: {
+                        console.error('Loading Points...');
+                        break;
                     }
+                    case TILE_TYPE.SCENEGRAPH:
+                    case TILE_TYPE.MESH: {
+                        console.log(`Loading Mesh ${tile.id}`);
+                        object3d = await loadMesh(tile);
+                        object3d.updateMatrixWorld();
+                        this.object3d.add(object3d);
+                        break;
+                    }
+                    default:
+                        break;
                 }
-            }
-            // TODO: Move all init3dTilesLayer code to constructor
-            init3dTilesLayer(view, view.mainLoop.scheduler, this, tileset.root).then(resolve);
+            },
+            onTileLoad: async (/** @type {Tile3D} */ tile) => {
+                this.tileset._frameNumber++;
+                view.notifyChange();
+                console.log('loaded tile');
+            },
+            onTileUnload: async (/** @type {Tile3D} */ tile) => {
+                console.log('unloaded tile');
+            },
+            onTileError: async (/** @type {Tile3D} */ tile) => {
+                console.log('error tile');
+            },
+        };
+
+
+        this.whenReady = this.source.whenReady.then((tilesetJson) => {
+            this.tileset = new Tileset3D(tilesetJson, {
+                ...tileOptions,
+                loadOptions: {
+                    worker: false,
+                    gltf: {
+                        loadImages: false,
+                    },
+                    '3d-tiles': {
+                        loadGLTF: false,
+                    },
+                },
+            });
+            // init3dTilesLayer(view, view.mainLoop.scheduler, this, this.tileset.root).then(resolve);
+            return resolve(this);
         });
     }
 
-    preUpdate() {
-        return pre3dTilesUpdate.bind(this)();
+    /**
+     * @param {Context} context
+     * @returns {Tile3D[]}
+     */
+    preUpdate(context) {
+        // const viewportId = 0;
+        // if (!this.tileset.roots[viewportId]) {
+        //     this.roots[id] = this.tileset._initializeTileHeaders(this.til
+        // }
+        console.log(this.tileset.isLoaded());
+
+        const camera = context.camera.camera3D;
+        const { width, height } = context.camera;
+
+        // Compute preSSE
+        // TODO: test if same compute than camera._preSSE
+        // TODO: Private field, so kinda ugly
+        const loadersFrustrum = new PerspectiveFrustum({
+            fov: (camera.fov / 180) * Math.PI,
+            aspectRatio: width / height,
+            near: camera.near,
+            far: camera.far,
+        });
+        const sseDenominator = loadersFrustrum.sseDenominator;
+
+        // Culling volume (from three to loaders.gl)
+        const frustrum = new THREE.Frustum();
+        frustrum.setFromProjectionMatrix(camera.projectionMatrix);
+        const planes = frustrum.planes
+            .map(plane => new Plane(plane.normal.toArray(), plane.constant));
+        const cullingVolume = new CullingVolume(planes);
+
+        // Set loaders.gl frame state (TODO: Only mandatory fields for now)
+        const position = new THREE.Vector3(); // TODO: Move to toplevel
+        this.frameState = {
+            camera: {
+                position: camera.getWorldPosition(position).toArray(),
+                direction: undefined,
+                up: undefined,
+            },
+            viewport: { // TODO: Mandatory, why?
+                id: 0,
+            },
+            // topDownViewport: undefined,
+            height,
+            cullingVolume,
+            frameNumber: this.tileset._frameNumber, // TODO: Mandatory, increment?
+            sseDenominator: 0,
+        };
+
+        // console.log(this.tileset.root?.children);
+
+        return this.tileset.root ? [this.tileset.root] : [];
     }
 
+    /**
+     * @param {Context} context
+     * @param {this} layer
+     * @param {Tile3D} node
+     * @returns {Tile3D[]}
+     */
     update(context, layer, node) {
-        return update(context, layer, node);
+        // this.tileset._traverser.updateTile(node, frameState);
+        // this.tileset._cache.reset();
+
+        // this.tileset;
+
+        const traverser = this.tileset._traverser;
+        traverser.traverse(node, this.frameState, {});
+
+        // for (const tile of this.tileset.tiles) {
+        //     console.log(tile.id, tile.selected);
+        // }
+        return [];
+    }
+
+    postUpdate() {
     }
 
     getObjectToUpdateForAttachedLayers(meta) {
-        if (meta.content) {
-            const result = [];
-            meta.content.traverse((obj) => {
-                if (obj.isObject3D && obj.material && obj.layer == meta.layer) {
-                    result.push(obj);
-                }
-            });
-            const p = meta.parent;
-            if (p && p.content) {
-                return {
-                    elements: result,
-                    parent: p.content,
-                };
-            } else {
-                return {
-                    elements: result,
-                };
-            }
-        }
+        // if (meta.content) {
+        //     const result = [];
+        //     meta.content.traverse((obj) => {
+        //         if (obj.isObject3D && obj.material && obj.layer == meta.layer) {
+        //             result.push(obj);
+        //         }
+        //     });
+        //     const p = meta.parent;
+        //     if (p && p.content) {
+        //         return {
+        //             elements: result,
+        //             parent: p.content,
+        //         };
+        //     } else {
+        //         return {
+        //             elements: result,
+        //         };
+        //     }
+        // }
     }
 
     /**

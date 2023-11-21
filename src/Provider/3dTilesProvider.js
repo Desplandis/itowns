@@ -1,60 +1,112 @@
 import * as THREE from 'three';
-import B3dmParser from 'Parser/B3dmParser';
-import PntsParser from 'Parser/PntsParser';
-import Fetcher from 'Provider/Fetcher';
-import ReferLayerProperties from 'Layer/ReferencingLayerProperties';
-import utf8Decoder from 'Utils/Utf8Decoder';
-import PointsMaterial from 'Renderer/PointsMaterial';
+import { load } from '@loaders.gl/core';
+import { TILE_REFINEMENT } from '@loaders.gl/tiles';
+import { Tile3DBatchTable, TILE3D_TYPE } from '@loaders.gl/3d-tiles';
+import { GLTFLoader } from 'ThreeExtended/loaders/GLTFLoader';
+// import B3dmParser from 'Parser/B3dmParser';
+// import PntsParser from 'Parser/PntsParser';
+// import Fetcher from 'Provider/Fetcher';
+// import ReferLayerProperties from 'Layer/ReferencingLayerProperties';
+// import utf8Decoder from 'Utils/Utf8Decoder';
+// import PointsMaterial from 'Renderer/PointsMaterial';
 
-function b3dmToMesh(data, layer, url) {
-    const urlBase = THREE.LoaderUtils.extractUrlBase(url);
-    const options = {
-        gltfUpAxis: layer.tileset.asset.gltfUpAxis,
-        urlBase,
-        overrideMaterials: layer.overrideMaterials,
-        doNotPatchMaterial: layer.doNotPatchMaterial,
-        opacity: layer.opacity,
-        registeredExtensions: layer.registeredExtensions,
-        layer,
-    };
-    return B3dmParser.parse(data, options).then((result) => {
-        const batchTable = result.batchTable;
-        // object3d is actually a THREE.Scene
-        const object3d = result.gltf.scene;
-        return { batchTable, object3d };
-    });
+
+const gltfLoader = new GLTFLoader();
+
+
+function parseAndConvert(url, tileset, metadata) {
+    const loader = tileset.loader;
+    return load(
+        url,
+        loader,
+        { '3d-tiles': { loadGLTF: false } },
+    )
+        .then(
+            (result) => {
+                console.log('Loaded b3dm : ', result);
+                const loadGLTF = new Promise((resolve) => {
+                    gltfLoader.parse(
+                        result.gltfArrayBuffer,
+                        metadata.badeURL,
+                        (gltf) => { resolve(gltf); },
+                    );
+                });
+                let batchTable;
+                switch (result.type) {
+                    case TILE3D_TYPE.BATCHED_3D_MODEL:
+                        batchTable = new Tile3DBatchTable(
+                            result.batchTableJson,
+                            result.batchTableBinary,
+                            result.featureTableJson.BATCH_LENGTH,
+                        );
+                        console.log(batchTable);
+                        break;
+                    case TILE3D_TYPE.POINT_CLOUD:
+                        break;
+                    default:
+                        break;
+                }
+                // return Promise.resolve(loadGLTF).then(values => (values.scene));
+                return Promise.resolve(loadGLTF);
+            },
+        )
+        .then(
+            values => (values.scene),
+        );
 }
 
-function pntsParse(data, layer) {
-    return PntsParser.parse(data, layer.registeredExtensions).then((result) => {
-        const material = layer.material ?
-            layer.material.clone() :
-            new PointsMaterial({
-                size: 0.05,
-                mode: layer.pntsMode,
-                shape: layer.pntsShape,
-                classification: layer.classification,
-                sizeMode: layer.pntsSizeMode,
-                minAttenuatedSize: layer.pntsMinAttenuatedSize,
-                maxAttenuatedSize: layer.pntsMaxAttenuatedSize,
-            });
 
-        // refer material properties in the layer so when layers opacity and visibility is updated, the material is
-        // automatically updated
-        ReferLayerProperties(material, layer);
-
-        // creation points with geometry and material
-        const points = new THREE.Points(result.point.geometry, material);
-
-        if (result.point.offset) {
-            points.position.copy(result.point.offset);
-        }
-
-        return { object3d: points,
-            batchTable: result.batchTable,
-        };
-    });
-}
+// function b3dmToMesh(data, layer, url) {
+//     const urlBase = THREE.LoaderUtils.extractUrlBase(url);
+//     const options = {
+//         gltfUpAxis: layer.tileset.asset.gltfUpAxis,
+//         urlBase,
+//         overrideMaterials: layer.overrideMaterials,
+//         doNotPatchMaterial: layer.doNotPatchMaterial,
+//         opacity: layer.opacity,
+//         registeredExtensions: layer.registeredExtensions,
+//         layer,
+//     };
+//
+//
+//     return B3dmParser.parse(data, options).then((result) => {
+//         const batchTable = result.batchTable;
+//         // object3d is actually a THREE.Scene
+//         const object3d = result.gltf.scene;
+//         return { batchTable, object3d };
+//     });
+// }
+//
+// function pntsParse(data, layer) {
+//     return PntsParser.parse(data, layer.registeredExtensions).then((result) => {
+//         const material = layer.material ?
+//             layer.material.clone() :
+//             new PointsMaterial({
+//                 size: 0.05,
+//                 mode: layer.pntsMode,
+//                 shape: layer.pntsShape,
+//                 classification: layer.classification,
+//                 sizeMode: layer.pntsSizeMode,
+//                 minAttenuatedSize: layer.pntsMinAttenuatedSize,
+//                 maxAttenuatedSize: layer.pntsMaxAttenuatedSize,
+//             });
+//
+//         // refer material properties in the layer so when layers opacity and visibility is updated, the material is
+//         // automatically updated
+//         ReferLayerProperties(material, layer);
+//
+//         // creation points with geometry and material
+//         const points = new THREE.Points(result.point.geometry, material);
+//
+//         if (result.point.offset) {
+//             points.position.copy(result.point.offset);
+//         }
+//
+//         return { object3d: points,
+//             batchTable: result.batchTable,
+//         };
+//     });
+// }
 
 export function configureTile(tile, layer, metadata, parent) {
     tile.frustumCulled = false;
@@ -67,7 +119,7 @@ export function configureTile(tile, layer, metadata, parent) {
     tile.geometricError = metadata.geometricError;
     tile.tileId = metadata.tileId;
     if (metadata.refine) {
-        tile.additiveRefinement = (metadata.refine.toUpperCase() === 'ADD');
+        tile.additiveRefinement = (metadata.refine === TILE_REFINEMENT.ADD);
     } else {
         tile.additiveRefinement = parent ? (parent.additiveRefinement) : false;
     }
@@ -92,41 +144,53 @@ function executeCommand(command) {
     if (path) {
         // Check if we have relative or absolute url (with tileset's lopocs for example)
         const url = path.startsWith('http') ? path : metadata.baseURL + path;
-        const supportedFormats = {
-            b3dm: b3dmToMesh,
-            pnts: pntsParse,
-        };
-        return Fetcher.arrayBuffer(url, layer.source.networkOptions).then((result) => {
-            if (result !== undefined) {
-                let func;
-                const magic = utf8Decoder.decode(new Uint8Array(result, 0, 4));
-                if (magic[0] === '{') {
-                    result = JSON.parse(utf8Decoder.decode(new Uint8Array(result)));
-                    const newPrefix = url.slice(0, url.lastIndexOf('/') + 1);
-                    layer.tileset.extendTileset(result, metadata.tileId, newPrefix, layer.registeredExtensions);
-                } else if (magic == 'b3dm') {
-                    func = supportedFormats.b3dm;
-                } else if (magic == 'pnts') {
-                    func = supportedFormats.pnts;
-                } else {
-                    return Promise.reject(`Unsupported magic code ${magic}`);
-                }
-                if (func) {
-                    // TODO: request should be delayed if there is a viewerRequestVolume
-                    return func(result, layer, url).then((content) => {
-                        tile.content = content.object3d;
-                        if (content.batchTable) {
-                            tile.batchTable = content.batchTable;
-                        }
-                        tile.add(content.object3d);
-                        tile.traverse(setLayer);
-                        return tile;
-                    });
-                }
-            }
+
+        return parseAndConvert(
+            url,
+            layer.tileset,
+            metadata,
+        ).then((content) => {
+            tile.content = content;
+            tile.add(content);
             tile.traverse(setLayer);
             return tile;
         });
+
+        // const supportedFormats = {
+        //     b3dm: b3dmToMesh,
+        //     pnts: pntsParse,
+        // };
+        // return Fetcher.arrayBuffer(url, layer.source.networkOptions).then((result) => {
+        //     if (result !== undefined) {
+        //         let func;
+        //         const magic = utf8Decoder.decode(new Uint8Array(result, 0, 4));
+        //         if (magic[0] === '{') {
+        //             result = JSON.parse(utf8Decoder.decode(new Uint8Array(result)));
+        //             const newPrefix = url.slice(0, url.lastIndexOf('/') + 1);
+        //             layer.tileset.extendTileset(result, metadata.tileId, newPrefix, layer.registeredExtensions);
+        //         } else if (magic == 'b3dm') {
+        //             func = supportedFormats.b3dm;
+        //         } else if (magic == 'pnts') {
+        //             func = supportedFormats.pnts;
+        //         } else {
+        //             return Promise.reject(`Unsupported magic code ${magic}`);
+        //         }
+        //         if (func) {
+        //             // TODO: request should be delayed if there is a viewerRequestVolume
+        //             return func(result, layer, url).then((content) => {
+        //                 tile.content = content.object3d;
+        //                 if (content.batchTable) {
+        //                     tile.batchTable = content.batchTable;
+        //                 }
+        //                 tile.add(content.object3d);
+        //                 tile.traverse(setLayer);
+        //                 return tile;
+        //             });
+        //         }
+        //     }
+        //     tile.traverse(setLayer);
+        //     return tile;
+        // });
     } else {
         tile.traverse(setLayer);
         return Promise.resolve(tile);

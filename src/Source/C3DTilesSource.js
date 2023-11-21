@@ -1,5 +1,27 @@
 import Source from 'Source/Source';
 import Fetcher from 'Provider/Fetcher';
+import { Tiles3DLoader } from '@loaders.gl/3d-tiles';
+import { load } from '@loaders.gl/core';
+
+/**
+ * @param {ArrayBuffer} buffer
+ */
+async function parseTileset(buffer) {
+    const tilesetJSON = await Tiles3DLoader.parse(buffer, {
+        '3d-tiles': {
+            isTileset: true,
+        },
+    });
+    return tilesetJSON;
+}
+
+/**
+ * @param {string} url
+ */
+async function loadURL(url) {
+    const tilesetJSON = await load(url, Tiles3DLoader, {});
+    return tilesetJSON;
+}
 
 /**
  * @classdesc
@@ -11,13 +33,13 @@ import Fetcher from 'Provider/Fetcher';
  * true. You should not change this, as it is used internally for optimisation.
  * @property {string} url - The URL of the tileset json.
  * @property {string} baseUrl - The base URL to access tiles.
+ * @extends Source
  */
 class C3DTilesSource extends Source {
     /**
      * Create a new Source for 3D Tiles data from a web server.
      *
      * @constructor
-     * @extends Source
      *
      * @param {Object} source An object that can contain all properties of {@link Source}.
      * Only `url` is mandatory.
@@ -26,7 +48,9 @@ class C3DTilesSource extends Source {
         super(source);
         this.isC3DTilesSource = true;
         this.baseUrl = this.url.slice(0, this.url.lastIndexOf('/') + 1);
-        this.whenReady = Fetcher.json(this.url, this.networkOptions);
+        // this.whenReady = Fetcher.arrayBuffer(this.url, this.networkOptions)
+        //     .then(parseTileset);
+        this.whenReady = loadURL(this.url);
     }
 }
 
