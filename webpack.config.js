@@ -49,7 +49,6 @@ module.exports = () => {
         entry: {
             itowns: [
                 'core-js',
-                'url-polyfill',
                 './src/MainBundle.js',
             ],
             debug: {
