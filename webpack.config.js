@@ -49,7 +49,6 @@ module.exports = () => {
         entry: {
             itowns: [
                 'core-js',
-                'regenerator-runtime/runtime',
                 'url-polyfill',
                 'whatwg-fetch',
                 './src/MainBundle.js',
