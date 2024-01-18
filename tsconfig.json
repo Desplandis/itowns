@@ -9,14 +9,14 @@
         "paths": {
             "*": [ "src/*" ]
         },
-        "moduleResolution": "nodenext",
+        "moduleResolution": "node",
         /* Emit */
         "declaration": true,
         "emitDeclarationOnly": true,
         "outDir": "types",
         /* JavaScript Support */
         "allowJs": true,
-        "checkJs": false, // set to true for type checking of js files
+        "checkJs": true, // set to true for type checking of js files
         /* Interop Constraints */
         "allowSyntheticDefaultImports": true,
         "esModuleInterop": true,
