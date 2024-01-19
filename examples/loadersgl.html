@@ -25,6 +25,7 @@
             const url = new URLSearchParams(window.location.search).get('tileset')
                 || 'https://raw.githubusercontent.com/CesiumGS/3d-tiles-samples/master/1.0/TilesetWithDiscreteLOD/tileset.json';
 
+            itowns.enableDracoLoader('./libs/draco/');
 
             // ---------- CREATE A GlobeView FOR SUPPORTING DATA VISUALIZATION : ----------
 
