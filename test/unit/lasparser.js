@@ -8,6 +8,7 @@ describe('LASParser', function () {
     let lasData;
     let lazData;
     let lazDataV1_4;
+    let lazChunkData;
 
     before(async () => {
         const networkOptions = process.env.HTTPS_PROXY ? { agent: new HttpsProxyAgent(process.env.HTTPS_PROXY) } : {};
@@ -15,6 +16,16 @@ describe('LASParser', function () {
         lazData = await Fetcher.arrayBuffer(`${baseurl}data_test.laz`, networkOptions);
         lasData = await Fetcher.arrayBuffer(`${baseurl}data_test.las`, networkOptions);
         lazDataV1_4 = await Fetcher.arrayBuffer(`${baseurl}ellipsoid-1.4.laz`, networkOptions);
+        lazChunkData = await Fetcher.arrayBuffer(
+            'https://s3.amazonaws.com/hobu-lidar/autzen-classified.copc.laz',
+            {
+                headers: {
+                    ...networkOptions.headers,
+                    range: 'bytes=79462688-80225945',
+                },
+                ...networkOptions,
+            },
+        );
         LASParser.enableLazPerf('./examples/libs/laz-perf');
     });
 
@@ -66,5 +77,34 @@ describe('LASParser', function () {
             assert.ok(compareWithEpsilon(bufferGeometry.boundingBox.max.y, bufferGeometry.userData.max[1], 0.1));
             assert.ok(compareWithEpsilon(bufferGeometry.boundingBox.max.z, bufferGeometry.userData.max[2], 0.1));
         });
+    });
+
+    it('parses part of a laz file to a THREE.BufferGeometry', async function () {
+        const min = [635577.79, 848882.15, 406.14];
+        const max = [639003.73, 853537.66, 615.26];
+
+        const header = {
+            pointDataRecordFormat: 7,
+            pointDataRecordLength: 36,
+            scale: [0.01, 0.01, 0.01],
+            offset: [637290.75, 851209.9, 510.7],
+        };
+        const bufferGeometry = await LASParser.parseChunk(lazChunkData, {
+            in: {
+                pointCount: 61201,
+                header,
+                eb: [],
+            },
+            out: {},
+        });
+
+        const epsilon = 0.1;
+
+        assert.ok(bufferGeometry.boundingBox.min.x + epsilon >= min[0]);
+        assert.ok(bufferGeometry.boundingBox.min.y + epsilon >= min[1]);
+        assert.ok(bufferGeometry.boundingBox.min.z + epsilon >= min[2]);
+        assert.ok(bufferGeometry.boundingBox.max.x - epsilon <= max[0]);
+        assert.ok(bufferGeometry.boundingBox.max.y - epsilon <= max[1]);
+        assert.ok(bufferGeometry.boundingBox.max.z - epsilon <= max[2]);
     });
 });
