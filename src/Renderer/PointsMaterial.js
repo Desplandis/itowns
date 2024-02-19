@@ -80,7 +80,7 @@ const DiscreteScheme = {
     },
 };
 
-// from potree PointCloudMaterial.js
+// from potree https://github.com/potree/potree/blob/develop/src/materials/PointCloudMaterial.js
 function generateGradientTexture(gradient) {
     const size = 64;
 
