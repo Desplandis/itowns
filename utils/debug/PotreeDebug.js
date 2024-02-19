@@ -1,5 +1,4 @@
 import { PNTS_MODE, PNTS_SHAPE, PNTS_SIZE_MODE } from 'Renderer/PointsMaterial';
-import Gradients from 'Utils/Gradients';
 
 function getController(gui, name) {
     let controller = null;
@@ -77,7 +76,13 @@ export default {
         const styleUI = layer.debugUI.addFolder('Styling');
         if (layer.material.mode != undefined) {
             styleUI.add(layer.material, 'mode', PNTS_MODE).name('Display mode').onChange(update);
-            styleUI.add(layer.material, 'gradient', Object.keys(Gradients)).name('gradient').onChange(update);
+            const gradiantsName = Object.keys(layer.material.gradients);
+            styleUI.add({ gradient: gradiantsName[0] }, 'gradient', gradiantsName).name('gradient')
+                .onChange((value) => {
+                    layer.material.gradient = layer.material.gradients[value];
+                    setupControllerVisibily(datUi, layer.material.mode);
+                    view.notifyChange(layer, true);
+                });
             styleUI.add(layer, 'minIntensityRange', layer.minIntensityRange, layer.maxIntensityRange - 1).name('Intensity min')
                 .onChange((value) => {
                     if (value >= layer.maxIntensityRange) {

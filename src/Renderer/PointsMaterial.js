@@ -166,14 +166,17 @@ class PointsMaterial extends THREE.RawShaderMaterial {
      * @param      {boolean}  [options.applyOpacityClassication=false]  apply opacity classification on all display mode.
      * @param      {Scheme}  [options.classification]  LUT for point classification colorization.
      * @param      {Scheme}  [options.discreteScheme]  LUT for other discret point values colorization.
-     * @param      {string}  [options.gradient='SPECTRAL']  Name of the gradient to use for continuous point values.
+     * @param      {string}  [options.gradient]  Descrition of the gradient to use for continuous point values.
+     *                          (Default value will be the 'SPECTRAL' gradient from Utils/Gradients)
      * @param      {number}  [options.sizeMode=PNTS_SIZE_MODE.VALUE]  point cloud size mode. Only 'VALUE' or 'ATTENUATED' are possible. VALUE use constant size, ATTENUATED compute size depending on distance from point to camera.
      * @param      {number}  [options.minAttenuatedSize=3]  minimum scale used by 'ATTENUATED' size mode
      * @param      {number}  [options.maxAttenuatedSize=10]  maximum scale used by 'ATTENUATED' size mode
      *
      * @property {Scheme}  classificationScheme - Color scheme for point classification values.
      * @property {Scheme}  discreteScheme - Color scheme for all other discrete values.
-     * @property {string}  _gradient - Name of the gradient to use for continuous point values.
+     * @property {object}  gradients - Descriptions of all available gradients.
+     * @property {object}  gradient - Description of the gradient to use for display.
+     * @property {THREE.CanvasTexture}  gradientTexture - The texture generate from the choosen gradient.
      *
      * @example
      * // change color category classification
@@ -195,7 +198,13 @@ class PointsMaterial extends THREE.RawShaderMaterial {
         const sizeMode = size === 0 ? PNTS_SIZE_MODE.ATTENUATED : (options.sizeMode || PNTS_SIZE_MODE.VALUE);
         const minAttenuatedSize = options.minAttenuatedSize || 3;
         const maxAttenuatedSize = options.maxAttenuatedSize || 10;
-        const _gradient = options.gradient || 'SPECTRAL';
+        let gradients = Gradients;
+        if (options.gradient) {
+            gradients = {
+                ...options.gradient,
+                ...Gradients,
+            };
+        }
 
         delete options.intensityRange;
         delete options.elevationRange;
@@ -213,7 +222,8 @@ class PointsMaterial extends THREE.RawShaderMaterial {
         delete options.gradient;
 
         super(options);
-        this.gradient = _gradient;
+        this.gradients = gradients;
+        this.gradientTexture = new THREE.CanvasTexture();
 
         this.vertexShader = PointsVS;
 
@@ -261,8 +271,8 @@ class PointsMaterial extends THREE.RawShaderMaterial {
         this.recomputeDiscreteTexture();
 
         // Gradient texture for continuous values
-        const gradientTexture = generateGradientTexture(Gradients[_gradient]);
-        CommonMaterial.setUniformProperty(this, 'gradientTexture', gradientTexture);
+        this.gradient = Object.values(gradients)[0];
+        CommonMaterial.setUniformProperty(this, 'gradientTexture', this.gradientTexture);
 
         if (oiMaterial) {
             this.uniforms.projectiveTextureAlphaBorder = oiMaterial.uniforms.projectiveTextureAlphaBorder;
@@ -350,19 +360,12 @@ class PointsMaterial extends THREE.RawShaderMaterial {
         this.intensityRange.copy(source.intensityRange);
         this.elevationRange.copy(source.elevationRange);
         this.angleRange.copy(source.angleRange);
-        this.gradient = source.gradient;
         Object.assign(this.defines, source.defines);
         return this;
     }
 
-    get gradient() {
-        return this._gradient;
-    }
     set gradient(value) {
-        if (this._gradient !== value) {
-            this._gradient = value;
-            this.gradientTexture = generateGradientTexture(Gradients[this._gradient]);
-        }
+        this.gradientTexture = generateGradientTexture(value);
     }
 }
 
