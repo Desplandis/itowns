@@ -164,14 +164,16 @@ class PointsMaterial extends THREE.RawShaderMaterial {
      * @param      {THREE.Vector2}  [options.elevationRange=new THREE.Vector2(0, 1000)]  elevation range.
      * @param      {THREE.Vector2}  [options.angleRange=new THREE.Vector2(-90, 90)]  scan angle range.
      * @param      {boolean}  [options.applyOpacityClassication=false]  apply opacity classification on all display mode.
-     * @param      {Scheme}  [options.classification] -  define points classification color.
-     * @param      {Scheme}  [options.discreteScheme] -  define points value and a color.
+     * @param      {Scheme}  [options.classification]  LUT for point classification colorization.
+     * @param      {Scheme}  [options.discreteScheme]  LUT for other discret point values colorization.
+     * @param      {string}  [options.gradient='SPECTRAL']  Name of the gradient to use for continuous point values.
      * @param      {number}  [options.sizeMode=PNTS_SIZE_MODE.VALUE]  point cloud size mode. Only 'VALUE' or 'ATTENUATED' are possible. VALUE use constant size, ATTENUATED compute size depending on distance from point to camera.
      * @param      {number}  [options.minAttenuatedSize=3]  minimum scale used by 'ATTENUATED' size mode
      * @param      {number}  [options.maxAttenuatedSize=10]  maximum scale used by 'ATTENUATED' size mode
      *
      * @property {Scheme}  classificationScheme - Color scheme for point classification values.
      * @property {Scheme}  discreteScheme - Color scheme for all other discrete values.
+     * @property {string}  _gradient - Name of the gradient to use for continuous point values.
      *
      * @example
      * // change color category classification
