@@ -3,7 +3,7 @@ import LASLoader from 'Parser/LASLoader';
 
 const lasLoader = new LASLoader();
 
-const WORKER_LIMIT = 3;
+const WORKER_LIMIT = 1;
 /** @type{Worker[]} */
 const workerPool = [];
 let taskIdCounter = 0;
@@ -80,7 +80,7 @@ async function parseFile(data, options) {
                 options: {
                     colorDepth: options?.colorDepth,
                 },
-            });
+            }, [data]);
         });
     }
 
@@ -104,7 +104,7 @@ async function parseChunk(data, options) {
                     pointCount: options.pointCount,
                     header: options.header,
                 },
-            });
+            }, [data]);
         });
     }
 
