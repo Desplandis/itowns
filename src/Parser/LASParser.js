@@ -103,6 +103,7 @@ async function parseChunk(data, options) {
                     colorDepth: options?.colorDepth,
                     pointCount: options.pointCount,
                     header: options.header,
+                    min: options.min,
                 },
             }, [data]);
         });

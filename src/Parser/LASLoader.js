@@ -44,6 +44,7 @@ class LASLoader {
 
     _parseView(view, options) {
         const colorDepth = options.colorDepth ?? 16;
+        const origin = options.min;
 
         const getPosition = ['X', 'Y', 'Z'].map(view.getter);
         const getIntensity = view.getter('Intensity');
@@ -75,9 +76,9 @@ class LASLoader {
             // `getPosition` apply scale and offset transform to the X, Y, Z
             // values. See https://github.com/connormanning/copc.js/blob/master/src/las/extractor.ts.
             const [x, y, z] = getPosition.map(f => f(i));
-            positions[i * 3] = x;
-            positions[i * 3 + 1] = y;
-            positions[i * 3 + 2] = z;
+            positions[i * 3] = x - origin.x;
+            positions[i * 3 + 1] = y - origin.y;
+            positions[i * 3 + 2] = z - origin.z;
 
             intensities[i] = getIntensity(i);
             returnNumbers[i] = getReturnNumber(i);
@@ -156,7 +157,10 @@ class LASLoader {
         }, this._initDecoder());
 
         const view = Las.View.create(pointData, header, eb);
-        const attributes = this._parseView(view, { colorDepth });
+        const attributes = this._parseView(view, {
+            colorDepth,
+            min: options.min,
+        });
         return { attributes };
     }
 
@@ -184,7 +188,10 @@ class LASLoader {
         const eb = ebVlr && Las.ExtraBytes.parse(await Las.Vlr.fetch(getter, ebVlr));
 
         const view = Las.View.create(pointData, header, eb);
-        const attributes = this._parseView(view, { colorDepth });
+        const attributes = this._parseView(view, {
+            colorDepth,
+            min: options.min,
+        });
         return {
             header,
             attributes,

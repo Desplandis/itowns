@@ -183,6 +183,7 @@ class CopcNode extends PointCloudNode {
             in: {
                 ...this.layer.source,
                 pointCount: this.numPoints,
+                min: this.bbox.min,
             },
             out: this.layer,
         });
