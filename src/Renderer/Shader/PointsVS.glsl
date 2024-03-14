@@ -20,6 +20,7 @@ uniform vec4 overlayColor;
 uniform vec2 elevationRange;
 uniform vec2 intensityRange;
 uniform vec2 angleRange;
+uniform vec4 modelMatrix;
 
 uniform bool applyOpacityClassication;
 
@@ -150,7 +151,8 @@ void main() {
             vec2 uv = vec2(i, (1. - i));
             vColor = texture2D(gradientTexture, uv);
         } else if (mode == PNTS_MODE_ELEVATION) {
-            float i = (position.z - elevationRange.x) / (elevationRange.y - elevationRange.x);
+            float z = (modelMatrix * vec4(position, 0.0)).z;
+            float i = (z - elevationRange.x) / (elevationRange.y - elevationRange.x);
             vec2 uv = vec2(i, (1. - i));
             vColor = texture2D(gradientTexture, uv);
         }

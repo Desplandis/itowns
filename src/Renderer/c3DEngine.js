@@ -11,6 +11,13 @@ import WEBGL from 'ThreeExtended/capabilities/WebGL';
 import Label2DRenderer from 'Renderer/Label2DRenderer';
 import { deprecatedC3DEngineWebGLOptions } from 'Core/Deprecated/Undeprecator';
 
+// eslint-disable-next-line
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+// eslint-disable-next-line
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+
+import { EDLPass } from './EDLPass';
+
 const depthRGBA = new THREE.Vector4();
 class c3DEngine {
     constructor(rendererOrDiv, options = {}) {
@@ -58,27 +65,6 @@ class c3DEngine {
         this.fullSizeRenderTarget.depthBuffer = true;
         this.fullSizeRenderTarget.depthTexture = new THREE.DepthTexture();
         this.fullSizeRenderTarget.depthTexture.type = THREE.UnsignedShortType;
-
-        this.renderView = function _(view) {
-            this.renderer.clear();
-            this.renderer.render(view.scene, view.camera3D);
-            if (view.tileLayer) {
-                this.label2dRenderer.render(view.tileLayer.object3d, view.camera3D);
-            }
-        }.bind(this);
-
-        /**
-         * @type {function}
-         * @param {number} w
-         * @param {number} h
-         */
-        this.onWindowResize = function _(w, h) {
-            this.width = w;
-            this.height = h;
-            this.fullSizeRenderTarget.setSize(this.width, this.height);
-            this.renderer.setSize(this.width, this.height);
-            this.label2dRenderer.setSize(this.width, this.height);
-        }.bind(this);
 
         // Create renderer
         try {
@@ -146,6 +132,44 @@ class c3DEngine {
             this.renderer.setSize(viewerDiv.clientWidth, viewerDiv.clientHeight);
             viewerDiv.appendChild(this.renderer.domElement);
         }
+
+        this.composer = new EffectComposer(
+            this.renderer,
+            this.fullSizeRenderTarget,
+        );
+
+        this.renderView = function _(view) {
+            if (!this.renderPass) {
+                this.renderPass = new RenderPass(view.scene, view.camera.camera3D);
+                const edlPass = new EDLPass(
+                    view.scene,
+                    view.camera.camera3D,
+                    view.camera.width,
+                    view.camera.height,
+                );
+                this.composer.addPass(this.renderPass);
+                this.composer.addPass(edlPass);
+            }
+
+            this.composer.render();
+            if (view.tileLayer) {
+                this.label2dRenderer.render(view.tileLayer.object3d, view.camera3D);
+            }
+        }.bind(this);
+
+        /**
+         * @type {function}
+         * @param {number} w
+         * @param {number} h
+         */
+        this.onWindowResize = function _(w, h) {
+            this.width = w;
+            this.height = h;
+            this.fullSizeRenderTarget.setSize(this.width, this.height);
+            this.renderer.setSize(this.width, this.height);
+            this.label2dRenderer.setSize(this.width, this.height);
+            this.composer.setSize(this.width, this.height);
+        }.bind(this);
     }
 
     getWindowSize() {

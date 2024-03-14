@@ -1,5 +1,10 @@
 import { EventDispatcher } from 'three';
 
+// eslint-disable-next-line
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+// eslint-disable-next-line
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+
 export const RENDERING_PAUSED = 0;
 export const RENDERING_SCHEDULED = 1;
 

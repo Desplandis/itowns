@@ -18,16 +18,6 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script>
     </head>
     <body>
-        <div id="description">Specify the URL of a COPC file to load:
-            <input type="text" id="url" />
-            <button onclick="readURL()">Load</button>
-            <div>
-                <button onClick="loadAutzen()">Load Autzen Stadium (80mb)</button>
-                <button onClick="loadSofi()">Load SoFI Stadium (2.3gb)</button>
-                <button onClick="loadMillsite()">Load Millsite (1.9gb)</button>
-            <div id="share"></div>
-            </div>
-        </div>
         <div id="viewerDiv">
 
         <script src="../dist/itowns.js"></script>
@@ -45,7 +35,16 @@
             const controls = new itowns.PlanarControls(view);
             view.mainLoop.gfxEngine.renderer.setClearColor(0xdddddd);
 
-            setUrl(uri.searchParams.get('copc'));
+            const urls = [
+"https://storage.sbg.cloud.ovh.net/v1/AUTH_63234f509d6048bca3c9fd7928720ca1/ppk-lidar/IQ/LHD_FXX_0575_6280_PTS_C_LAMB93_IGN69.copc.laz",
+"https://storage.sbg.cloud.ovh.net/v1/AUTH_63234f509d6048bca3c9fd7928720ca1/ppk-lidar/IQ/LHD_FXX_0575_6281_PTS_C_LAMB93_IGN69.copc.laz",
+"https://storage.sbg.cloud.ovh.net/v1/AUTH_63234f509d6048bca3c9fd7928720ca1/ppk-lidar/IQ/LHD_FXX_0574_6281_PTS_C_LAMB93_IGN69.copc.laz",
+"https://storage.sbg.cloud.ovh.net/v1/AUTH_63234f509d6048bca3c9fd7928720ca1/ppk-lidar/IQ/LHD_FXX_0574_6280_PTS_C_LAMB93_IGN69.copc.laz",
+            ];
+
+            for (const url of urls) {
+                load(url);
+            }
 
             function onLayerReady(layer) {
                 const camera = view.camera.camera3D;
@@ -70,58 +69,19 @@
             }
 
 
-            function readURL() {
-                const url = document.getElementById('url').value;
-
-                if (url) {
-                    setUrl(url);
-                }
-            }
-
-            function setUrl(url) {
-                if (!url) return;
-
-                const input_url = document.getElementById('url');
-                if (!input_url) return;
-
-                uri.searchParams.set('copc', url);
-                history.replaceState(null, null, `?${uri.searchParams.toString()}`);
-
-                input_url.value = url;
-                load(url);
-            }
-
-
             function load(url) {
                 const source = new itowns.CopcSource({ url });
 
-                if (layer) {
-                    gui.removeFolder(layer.debugUI);
-                    view.removeLayer('COPC');
-                    view.notifyChange();
-                    layer.delete();
-                }
-
-                layer = new itowns.CopcLayer('COPC', {
+                const layer = new itowns.CopcLayer(url, {
                     source,
                     crs: view.referenceCrs,
                     sseThreshold: 2,
-                    pointBudget: 3000000,
+                    pointSize: 1,
+                    pointBudget: 15000000,
                 });
+                            layer.material.mode = itowns.PNTS_MODE.ELEVATION;
+                console.log(view);
                 view.addLayer(layer).then(onLayerReady);
-                debug.PotreeDebug.initTools(view, layer, gui);
-            }
-
-            function loadAutzen() {
-                setUrl("https://s3.amazonaws.com/hobu-lidar/autzen-classified.copc.laz");
-            }
-
-            function loadSofi() {
-                setUrl("https://s3.amazonaws.com/hobu-lidar/sofi.copc.laz");
-            }
-
-            function loadMillsite() {
-                setUrl("https://s3.amazonaws.com/data.entwine.io/millsite.copc.laz");
             }
         </script>
     </body>
