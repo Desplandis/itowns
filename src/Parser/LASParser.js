@@ -1,7 +1,24 @@
 import * as THREE from 'three';
 import LASLoader from 'Parser/LASLoader';
+import { spawn, Pool, Transfer } from 'threads';
 
 const lasLoader = new LASLoader();
+const lasWorkerLoader = {
+    async parseFile(data, options) {
+        if (!this.pool) {
+            const initWorker = () =>
+                new Worker(
+                    /* webpackChunkName: "itowns_lasparser" */
+                    new URL('../Worker/LASWorker.js', import.meta.url),
+                );
+            this.pool = Pool(async () => spawn(initWorker()), {
+                size: 1,
+            });
+        }
+
+        return this.pool.queue(w => w.parseFile(Transfer(data), options));
+    },
+};
 
 function buildBufferGeometry(attributes) {
     const geometry = new THREE.BufferGeometry();
@@ -56,7 +73,6 @@ export default {
         lasLoader.lazPerf = path;
     },
 
-
     /**
      * Parses a chunk of a LAS or LAZ (LASZip) and returns the corresponding
      * `THREE.BufferGeometry`.
@@ -94,6 +110,8 @@ export default {
      * @param {ArrayBuffer} data - The file content to parse.
      * @param {Object} [options]
      * @param {Object} [options.in] - Options to give to the parser.
+     * @param {boolean} [options.in.worker=true] - Use workers for parsing in
+     * the background and thus not blocking the main thread.
      * @param { 8 | 16 } [options.in.colorDepth] - Color depth (in bits).
      * Defaults to 8 bits for LAS 1.2 and 16 bits for later versions
      * (as mandatory by the specification)
@@ -105,7 +123,11 @@ export default {
         if (options.out?.skip) {
             console.warn("Warning: options 'skip' not supported anymore");
         }
-        return lasLoader.parseFile(data, {
+
+        const useWorker = options.in.worker ?? true;
+        const loader = useWorker ? lasWorkerLoader : lasLoader;
+
+        return loader.parseFile(data, {
             colorDepth: options.in?.colorDepth,
         }).then((parsedData) => {
             const geometry = buildBufferGeometry(parsedData.attributes);
