@@ -4,11 +4,17 @@ import { expose, Transfer } from 'threads/worker';
 const loader = new LASLoader();
 
 function transferable(attributes) {
-    const { origin, ...attrs } = attributes;
-    return Object.values(attrs).map(a => a.buffer);
+    return Object.values(attributes)
+        .filter(ArrayBuffer.isView)
+        .map(a => a.buffer);
 }
 
 expose({
+    async parseChunk(data, options) {
+        const result = await loader.parseChunk(data, options);
+        return Transfer(result, transferable(result.attributes));
+    },
+
     async parseFile(data, options) {
         const result = await loader.parseFile(data, options);
         return Transfer(result, transferable(result.attributes));

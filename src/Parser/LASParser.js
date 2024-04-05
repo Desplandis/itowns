@@ -4,19 +4,25 @@ import { spawn, Pool, Transfer } from 'threads';
 
 const lasLoader = new LASLoader();
 const lasWorkerLoader = {
-    async parseFile(data, options) {
-        if (!this.pool) {
-            const initWorker = () =>
-                new Worker(
-                    /* webpackChunkName: "itowns_lasparser" */
-                    new URL('../Worker/LASWorker.js', import.meta.url),
-                );
-            this.pool = Pool(async () => spawn(initWorker()), {
-                size: 1,
-            });
-        }
+    initPool() {
+        const initWorker = () => new Worker(
+            /* webpackChunkName: "itowns_lasparser" */
+            new URL('../Worker/LASWorker.js', import.meta.url),
+        );
+        this.pool = Pool(async () => spawn(initWorker()), {
+            size: 1,
+        });
+        return this.pool;
+    },
 
-        return this.pool.queue(w => w.parseFile(Transfer(data), options));
+    async parseChunk(data, options) {
+        const pool = this.pool ?? this.initPool();
+        return pool.queue(w => w.parseChunk(Transfer(data), options));
+    },
+
+    async parseFile(data, options) {
+        const pool = this.pool ?? this.initPool();
+        return pool.queue(w => w.parseFile(Transfer(data), options));
     },
 };
 
@@ -80,6 +86,8 @@ export default {
      * @param {ArrayBuffer} data - The file content to parse.
      * @param {Object} options
      * @param {Object} options.in - Options to give to the parser.
+     * @param {boolean} [options.in.worker=true] - Use workers for parsing in
+     * the background and thus not blocking the main thread.
      * @param {number} option.in.pointCount - Number of points encoded in this
      * data chunk.
      * @param {Object} options.in.header - Partial LAS file header.
@@ -96,7 +104,15 @@ export default {
      * `THREE.BufferGeometry`.
      */
     parseChunk(data, options = {}) {
-        return lasLoader.parseChunk(data, options.in).then((parsedData) => {
+        const useWorker = options.in.worker ?? true;
+        const loader = useWorker ? lasWorkerLoader : lasLoader;
+
+        return loader.parseChunk(data, {
+            pointCount: options.in.pointCount,
+            header: options.in.header,
+            eb: options.eb,
+            colorDepth: options.in.colorDepth,
+        }).then((parsedData) => {
             const geometry = buildBufferGeometry(parsedData.attributes);
             geometry.computeBoundingBox();
             return geometry;
