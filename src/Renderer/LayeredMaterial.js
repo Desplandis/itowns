@@ -97,6 +97,13 @@ let nbSamplers;
 const fragmentShader = [];
 class LayeredMaterial extends THREE.ShaderMaterial {
     #_visible = true;
+
+    /**
+     * A material for drawing terrain tiles.
+     * @param {THREE.ShaderMaterialParameters} [options={}] - properties to
+     * pass to the material.
+     * @param {number} crsCount - number of different crs in this material.
+     */
     constructor(options = {}, crsCount) {
         super(options);
 

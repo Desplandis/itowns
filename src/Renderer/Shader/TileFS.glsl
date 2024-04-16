@@ -1,4 +1,3 @@
-#include <itowns/precision_qualifier>
 #include <logdepthbuf_pars_fragment>
 #include <itowns/pitUV>
 #include <itowns/color_layers_pars_fragment>

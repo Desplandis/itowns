@@ -1,4 +1,3 @@
-#include <itowns/precision_qualifier>
 #include <common>
 #include <itowns/elevation_pars_vertex>
 #include <logdepthbuf_pars_vertex>

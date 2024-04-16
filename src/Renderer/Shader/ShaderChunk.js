@@ -13,7 +13,6 @@ import mode_id_fragment from './Chunk/mode_id_fragment.glsl';
 import overlay_fragment from './Chunk/overlay_fragment.glsl';
 import overlay_pars_fragment from './Chunk/overlay_pars_fragment.glsl';
 import pitUV from './Chunk/pitUV.glsl';
-import precision_qualifier from './Chunk/precision_qualifier.glsl';
 import projective_texturing_vertex from './Chunk/projective_texturing_vertex.glsl';
 import projective_texturing_pars_vertex from './Chunk/projective_texturing_pars_vertex.glsl';
 import projective_texturing_pars_fragment from './Chunk/projective_texturing_pars_fragment.glsl';
@@ -38,7 +37,6 @@ const itownsShaderChunk = {
     overlay_fragment,
     overlay_pars_fragment,
     pitUV,
-    precision_qualifier,
     projective_texturing_vertex,
     projective_texturing_pars_vertex,
     projective_texturing_pars_fragment,

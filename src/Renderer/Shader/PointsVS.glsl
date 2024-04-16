@@ -1,4 +1,3 @@
-#include <itowns/precision_qualifier>
 #if defined(USE_TEXTURES_PROJECTIVE)
 #include <itowns/projective_texturing_pars_vertex>
 #endif

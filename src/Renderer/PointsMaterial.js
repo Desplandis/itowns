@@ -158,7 +158,7 @@ class PointsMaterial extends THREE.ShaderMaterial {
      * @param      {object}  [options={}]  The options
      * @param      {number}  [options.size=0]  size point
      * @param      {number}  [options.mode=PNTS_MODE.COLOR]  display mode.
-     * @param      {number}  [options.mode=PNTS_SHAPE.CIRCLE]  rendered points shape.
+     * @param      {number}  [options.shape=PNTS_SHAPE.CIRCLE]  rendered points shape.
      * @param      {THREE.Vector4}  [options.overlayColor=new THREE.Vector4(0, 0, 0, 0)]  overlay color.
      * @param      {THREE.Vector2}  [options.intensityRange=new THREE.Vector2(1, 65536)]  intensity range.
      * @param      {THREE.Vector2}  [options.elevationRange=new THREE.Vector2(0, 1000)]  elevation range.
@@ -185,49 +185,40 @@ class PointsMaterial extends THREE.ShaderMaterial {
      * pointMaterial.recomputeClassification();
      */
     constructor(options = {}) {
-        const intensityRange = options.intensityRange || new THREE.Vector2(1, 65536);
-        const elevationRange = options.elevationRange || new THREE.Vector2(0, 1000);
-        const angleRange = options.angleRange || new THREE.Vector2(-90, 90);
-        const oiMaterial = options.orientedImageMaterial;
-        const classificationScheme = options.classification || ClassificationScheme.DEFAULT;
-        const discreteScheme = options.discreteScheme || DiscreteScheme.DEFAULT;
-        const applyOpacityClassication = options.applyOpacityClassication == undefined ? false : options.applyOpacityClassication;
-        const size = options.size || 0;
-        const mode = options.mode || PNTS_MODE.COLOR;
-        const shape = options.shape || PNTS_SHAPE.CIRCLE;
-        const sizeMode = size === 0 ? PNTS_SIZE_MODE.ATTENUATED : (options.sizeMode || PNTS_SIZE_MODE.VALUE);
-        const minAttenuatedSize = options.minAttenuatedSize || 3;
-        const maxAttenuatedSize = options.maxAttenuatedSize || 10;
+        const {
+            size = 2,
+            mode = PNTS_MODE.COLOR,
+            shape = PNTS_SHAPE.CIRCLE,
+            sizeMode = PNTS_SIZE_MODE.VALUE,
+            minAttenuatedSize = 2,
+            maxAttenuatedSize = 10,
+            overlayColor = new THREE.Vector4(0, 0, 0, 0),
+            intensityRange = new THREE.Vector2(1, 65536),
+            elevationRange = new THREE.Vector2(0, 1000),
+            angleRange = new THREE.Vector2(-90, 90),
+            classificationScheme = ClassificationScheme.DEFAULT,
+            discreteScheme = DiscreteScheme.DEFAULT,
+            applyOpacityClassication = false,
+            gradient,
+            orientedImageMaterial,
+            ...materialOptions
+        } = options;
+
         let gradients = Gradients;
-        if (options.gradient) {
+        if (gradient) {
             gradients = {
-                ...options.gradient,
+                ...gradient,
                 ...Gradients,
             };
         }
 
-        delete options.intensityRange;
-        delete options.elevationRange;
-        delete options.angleRange;
-        delete options.orientedImageMaterial;
-        delete options.classificationScheme;
-        delete options.discreteScheme;
-        delete options.applyOpacityClassication;
-        delete options.size;
-        delete options.mode;
-        delete options.shape;
-        delete options.sizeMode;
-        delete options.minAttenuatedSize;
-        delete options.maxAttenuatedSize;
-        delete options.gradient;
-
-        super(options);
+        super(materialOptions);
         this.gradients = gradients;
         this.gradientTexture = new THREE.CanvasTexture();
 
         this.vertexShader = PointsVS;
 
-        const scale = options.scale || 0.05 * 0.5 / Math.tan(1.0 / 2.0); // autosizing scale
+        const scale = 0.05 * 0.5 / Math.tan(1.0 / 2.0); // autosizing scale
 
         CommonMaterial.setDefineMapping(this, 'PNTS_MODE', PNTS_MODE);
         CommonMaterial.setDefineMapping(this, 'PNTS_SHAPE', PNTS_SHAPE);
@@ -238,7 +229,7 @@ class PointsMaterial extends THREE.ShaderMaterial {
         CommonMaterial.setUniformProperty(this, 'shape', shape);
         CommonMaterial.setUniformProperty(this, 'picking', false);
         CommonMaterial.setUniformProperty(this, 'opacity', this.opacity);
-        CommonMaterial.setUniformProperty(this, 'overlayColor', options.overlayColor || new THREE.Vector4(0, 0, 0, 0));
+        CommonMaterial.setUniformProperty(this, 'overlayColor', overlayColor);
         CommonMaterial.setUniformProperty(this, 'intensityRange', intensityRange);
         CommonMaterial.setUniformProperty(this, 'elevationRange', elevationRange);
         CommonMaterial.setUniformProperty(this, 'angleRange', angleRange);
@@ -274,6 +265,7 @@ class PointsMaterial extends THREE.ShaderMaterial {
         this.gradient = Object.values(gradients)[0];
         CommonMaterial.setUniformProperty(this, 'gradientTexture', this.gradientTexture);
 
+        const oiMaterial = orientedImageMaterial;
         if (oiMaterial) {
             this.uniforms.projectiveTextureAlphaBorder = oiMaterial.uniforms.projectiveTextureAlphaBorder;
             this.uniforms.projectiveTextureDistortion = oiMaterial.uniforms.projectiveTextureDistortion;
