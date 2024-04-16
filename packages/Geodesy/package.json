@@ -29,7 +29,7 @@
     "type": "git",
     "url": "git+https://github.com/itowns"
   },
-  "license": "(LGPL-2.1)",
+  "license": "(CECILL-B OR MIT)",
   "bugs": {
     "url": "https://github.com/itowns/itowns/issues"
   },
