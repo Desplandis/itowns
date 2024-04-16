@@ -44,7 +44,8 @@ module.exports = () => {
         mode,
         context: path.resolve(__dirname),
         resolve: {
-            modules: [path.resolve(__dirname, 'src'), 'node_modules'],
+            exportsFields: ['itowns_exports', 'exports'],
+            modules: [path.resolve(__dirname, 'src'), path.resolve(__dirname, './packages/Geodesy/src'), 'node_modules'],
         },
         entry: {
             itowns: [
@@ -72,6 +73,7 @@ module.exports = () => {
             rules: [
                 {
                     test: /\.js$/,
+                    exclude: path.resolve(__dirname, '/node_modules/'),
                     include,
                     use: babelLoaderOptions,
                 },

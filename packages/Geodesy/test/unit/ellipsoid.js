@@ -1,6 +1,7 @@
+import { Ray, Vector3 } from 'three';
 import assert from 'assert';
-import Coordinates from 'Core/Geographic/Coordinates';
-import Ellipsoid from 'Core/Math/Ellipsoid';
+import Coordinates from 'Coordinates';
+import Ellipsoid from 'Ellipsoid';
 
 describe('Ellipsoid', function () {
     const c1 = new Coordinates('EPSG:4326', 0, 0, 0);
@@ -49,5 +50,32 @@ describe('Ellipsoid', function () {
 
         const d = ellipsoid.geodesicDistance(c3, c4) / 1000;
         assert.ok(Math.abs(d - 200) < 0.01);
+    });
+
+    it('intersect ray with ellipsoid', () => {
+        const e = new Ellipsoid({ x: 1, y: 2, z: 3 });
+
+        // intersection to X axis
+        const ray = new Ray(new Vector3(10, 0, 0), new Vector3(-1, 0, 0));
+        const interX = e.intersection(ray);
+        assert.equal(interX.x, 1);
+        assert.equal(interX.y, 0);
+        assert.equal(interX.z, 0);
+
+        // intersection to Y axis
+        ray.origin.set(0, 10, 0);
+        ray.direction.set(0, -1, 0);
+        const interY = e.intersection(ray);
+        assert.equal(interY.x, 0);
+        assert.equal(interY.y, 2);
+        assert.equal(interY.z, 0);
+
+        // intersection to Z axis
+        ray.origin.set(0, 0, 10);
+        ray.direction.set(0, 0, -1);
+        const interZ = e.intersection(ray);
+        assert.equal(interZ.x, 0);
+        assert.equal(interZ.y, 0);
+        assert.equal(interZ.z.toFixed(5), 3);
     });
 });
