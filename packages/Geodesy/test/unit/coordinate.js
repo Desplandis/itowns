@@ -126,4 +126,3 @@ describe('Coordinates', function () {
         assert.equal(distance, coord1.spatialEuclideanDistanceTo(coord0));
     });
 });
-

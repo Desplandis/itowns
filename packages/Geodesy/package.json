@@ -23,15 +23,17 @@
     "bump": "if [ -z $npm_config_level ]; then grunt bump:minor;  else grunt bump:$npm_config_level; fi"
   },
   "files": [
-    "src"
+    "*.md",
+    "src",
+    "lib"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/itowns"
+    "url": "git+https://github.com/iTowns/itowns.git"
   },
   "license": "(CECILL-B OR MIT)",
   "bugs": {
     "url": "https://github.com/itowns/itowns/issues"
   },
-  "homepage": "https://itowns project"
+  "homepage": "https://itowns.github.io/"
 }
