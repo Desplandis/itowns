@@ -186,7 +186,8 @@
     },
     "source": {
         "include": [ "src", "examples/js/plugins", "packages" ],
-        "exclude": [ "src/ThreeExtended" ]
+        "exclude": [ "src/ThreeExtended" ],
+        "excludePattern": "(^|\\/|\\\\)lib"
     },
     "plugins": ["plugins/markdown"]
 }
