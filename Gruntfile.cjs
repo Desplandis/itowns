@@ -4,7 +4,7 @@ module.exports = (grunt) => {
         pkg: grunt.file.readJSON('package.json'),
         bump: {
             options: {
-                files: ['package.json', 'package-lock.json', 'src/Main.js'],
+                files: ['package.json', 'package-lock.json', 'src/Main.js', 'packages/**/package.json'],
                 updateConfigs: [],
                 commit: true,
                 commitMessage: 'release v%VERSION%',
