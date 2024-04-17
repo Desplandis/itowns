@@ -12,7 +12,7 @@
     "packages/*"
   ],
   "scripts": {
-    "lint": "eslint \"src/**/*.js\" \"test/**/*.js\" \"examples/**/*.js\" \"docs/*.js\"",
+    "lint": "eslint \"/src/**/*.js\" \"packages/**/src/**/*.js\" \"test/**/*.js\" \"packages/test/**/*.js\" \"examples/**/*.js\" \"docs/*.js\"",
     "doc": "jsdoc --readme docs/HOMEPAGE.md -c docs/config.json",
     "doclint": "npm run doc -- -t templates/silent",
     "test": "npm run transpile --workspaces && npm run test --workspaces && npm run lint -- --max-warnings=0 && npm run build && npm run test-with-coverage && npm run test-functional",
