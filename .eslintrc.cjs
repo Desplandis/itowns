@@ -1,3 +1,5 @@
+const path = require('path');
+
 module.exports = {
     root: true,
     extends: [
@@ -14,7 +16,7 @@ module.exports = {
     settings: {
         'import/resolver': {
             webpack: {
-                config: './webpack.config.cjs',
+                config: path.resolve(__dirname, './webpack.config.cjs'),
             },
         },
     },

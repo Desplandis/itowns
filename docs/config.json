@@ -187,8 +187,9 @@
         }
     },
     "source": {
-        "include": [ "src", "examples/js/plugins" ],
-        "exclude": [ "src/ThreeExtended" ]
+        "include": [ "src", "examples/js/plugins", "packages" ],
+        "exclude": [ "src/ThreeExtended" ],
+        "excludePattern": "(^|\\/|\\\\)lib"
     },
     "plugins": ["plugins/markdown"]
 }
