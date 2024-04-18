@@ -30,7 +30,7 @@ function defaultColorEncoding(header) {
  */
 class LASLoader {
     constructor() {
-        this._wasmPath = 'https://cdn.jsdelivr.net/npm/laz-perf@0.0.6/lib/';
+        this._wasmPath = 'https://cdn.jsdelivr.net/npm/laz-perf@0.0.6/lib';
         this._wasmPromise = null;
     }
 
