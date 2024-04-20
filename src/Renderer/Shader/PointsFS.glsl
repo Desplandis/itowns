@@ -1,4 +1,5 @@
 #include <logdepthbuf_pars_fragment>
+#include <fog_pars_fragment>
 #if defined(USE_TEXTURES_PROJECTIVE)
 #include <itowns/projective_texturing_pars_fragment>
 #endif
@@ -8,7 +9,6 @@ uniform bool picking;
 uniform int shape;
 
 void main() {
-    #include <logdepthbuf_fragment>
     //square shape does not require any change.
     if (shape == PNTS_SHAPE_CIRCLE) {
         //circular rendering in glsl
@@ -31,4 +31,7 @@ void main() {
 #else
     gl_FragColor = vColor;
 #endif
+
+    #include <logdepthbuf_fragment>
+    #include <fog_fragment>
 }

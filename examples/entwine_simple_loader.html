@@ -37,6 +37,8 @@
             var viewerDiv = document.getElementById('viewerDiv');
             viewerDiv.style.display = 'block';
             var view = new itowns.View('EPSG:3946', viewerDiv);
+            // view.scene.fog = new itowns.THREE.Fog(0xcccccc, 10, 15);
+            view.scene.fog = new itowns.THREE.FogExp2(0xcccccc, 0.002);
             view.mainLoop.gfxEngine.renderer.setClearColor(0xcccccc);
 
             const controls = new itowns.PlanarControls(view);

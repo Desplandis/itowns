@@ -1,8 +1,9 @@
+#include <common>
+#include <logdepthbuf_pars_vertex>
+#include <fog_pars_vertex>
 #if defined(USE_TEXTURES_PROJECTIVE)
 #include <itowns/projective_texturing_pars_vertex>
 #endif
-#include <common>
-#include <logdepthbuf_pars_vertex>
 
 #define NB_CLASS 8.
 
@@ -168,5 +169,7 @@ void main() {
 #if defined(USE_TEXTURES_PROJECTIVE)
     #include <itowns/projective_texturing_vertex>
 #endif
+
     #include <logdepthbuf_vertex>
+    #include <fog_vertex>
 }
