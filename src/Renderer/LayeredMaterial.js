@@ -109,11 +109,10 @@ class LayeredMaterial extends THREE.ShaderMaterial {
 
         nbSamplers = nbSamplers || [samplersElevationCount, getMaxColorSamplerUnitsCount()];
 
+        this.fog = true;
+
         this.defines.NUM_VS_TEXTURES = nbSamplers[0];
         this.defines.NUM_FS_TEXTURES = nbSamplers[1];
-        // TODO: We do not use the fog from the scene, is this a desired
-        // behavior?
-        this.defines.USE_FOG = 1;
         this.defines.NUM_CRS = crsCount;
 
         CommonMaterial.setDefineMapping(this, 'ELEVATION', ELEVATION_MODES);
@@ -146,11 +145,15 @@ class LayeredMaterial extends THREE.ShaderMaterial {
         CommonMaterial.setUniformProperty(this, 'lightPosition', new THREE.Vector3(-0.5, 0.0, 1.0));
 
         // Misc properties
-        CommonMaterial.setUniformProperty(this, 'fogDistance', 1000000000.0);
-        CommonMaterial.setUniformProperty(this, 'fogColor', new THREE.Color(0.76, 0.85, 1.0));
         CommonMaterial.setUniformProperty(this, 'overlayAlpha', 0);
         CommonMaterial.setUniformProperty(this, 'overlayColor', new THREE.Color(1.0, 0.3, 0.0));
         CommonMaterial.setUniformProperty(this, 'objectId', 0);
+
+        // Fog uniforms
+        this.uniforms.fogDensity = { value: 0.00025 };
+        this.uniforms.fogNear = { value: 1 };
+        this.uniforms.fogFar = { value: 2000 };
+        this.uniforms.fogColor = { value: new THREE.Color(0xffffff) };
 
         CommonMaterial.setUniformProperty(this, 'geoidHeight', 0.0);
 

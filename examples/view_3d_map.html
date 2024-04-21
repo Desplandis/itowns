@@ -41,6 +41,7 @@
 
             // Create a GlobeView
             const view = new itowns.GlobeView(viewerDiv, placement);
+            view.scene.fog = new itowns.THREE.Fog(0xcccccc, 10, 10);
 
             // Setup loading screen and debug menu
             setupLoadingScreen(viewerDiv, view);

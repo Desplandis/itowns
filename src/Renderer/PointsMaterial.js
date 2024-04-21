@@ -213,12 +213,13 @@ class PointsMaterial extends THREE.ShaderMaterial {
         }
 
         super(materialOptions);
+
         this.fog = true;
 
-        this.uniforms.fogDensity = new THREE.Uniform(0.00025);
-        this.uniforms.fogNear = new THREE.Uniform(1);
-        this.uniforms.fogFar = new THREE.Uniform(2000);
-        this.uniforms.fogColor = new THREE.Uniform(new THREE.Color(0xff00ff));
+        this.uniforms.fogDensity = { value: 0.00025 };
+        this.uniforms.fogNear = { value: 1 };
+        this.uniforms.fogFar = { value: 2000 };
+        this.uniforms.fogColor = { value: new THREE.Color(0xffffff) };
 
         this.gradients = gradients;
         this.gradientTexture = new THREE.CanvasTexture();
