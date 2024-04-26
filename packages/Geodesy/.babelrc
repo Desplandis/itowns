@@ -1,0 +1,26 @@
+{
+    "presets": [
+        ["@babel/preset-env", {
+            "targets": {
+                "browsers": "defaults and supports webgl2"
+            },
+            "modules": false
+        }]
+    ],
+    "plugins": [
+        ["module-extension-resolver"],
+        ["@babel/plugin-transform-runtime", {
+            "regenerator": false
+        }],
+        ["minify-replace", {
+            "replacements": [{
+                "identifierName": "__DEBUG__",
+                "replacement": {
+                    "type": "booleanLiteral",
+                    "value": true
+                }
+            }]
+        }],
+        ["minify-dead-code-elimination"]
+    ]
+}

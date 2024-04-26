@@ -4,9 +4,6 @@
   "description": "Geodesy",
   "type": "module",
   "main": "lib/Main.js",
-  "itowns_exports": {
-    ".": "./src/Main.js"
-  },
   "exports": {
     ".": "./lib/Main.js"
   },
