@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import proj4 from 'proj4';
-import Ellipsoid from 'Ellipsoid';
-import CRS from 'Crs';
+import Ellipsoid from './Ellipsoid.js';
+import CRS from './Crs.js';
 
 proj4.defs('EPSG:4978', '+proj=geocent +datum=WGS84 +units=m +no_defs');
 

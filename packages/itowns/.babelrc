@@ -26,7 +26,7 @@
                 "identifierName": "__DEBUG__",
                 "replacement": {
                     "type": "booleanLiteral",
-                    "value": false
+                    "value": true
                 }
             }]
         }],

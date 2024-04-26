@@ -1,14 +1,13 @@
 {
-  "private": true,
+  "name": "itowns",
+  "version": "2.43.0",
   "description": "A JS/WebGL framework for 3D geospatial data visualization",
+  "type": "module",
+  "main": "lib/Main.js",
   "exports": {
     ".": "./lib/Main.js",
     "./widgets": "./lib/Utils/gui/Main.js"
   },
-  "workspaces": [
-    "packages/geodesy",
-    "packages/itowns"
-  ],
   "scripts": {
     "lint": "eslint \"/src/**/*.js\" \"packages/**/src/**/*.js\" \"test/**/*.js\" \"packages/test/**/*.js\" \"examples/**/*.js\" \"docs/*.js\"",
     "doc": "jsdoc --readme docs/HOMEPAGE.md -c docs/config.json",
@@ -21,28 +20,7 @@
     "test-with-coverage_lcov": "npm run transpile --workspaces && c8 --temp-directory ./coverage/tmp --report-dir ./coverage/itowns -n src --reporter=lcov cross-env npm run test-unit && npm run test-with-coverage_lcov --workspaces && c8 report --reporter=lcov",
     "base-test-unit": "cross-env BABEL_DISABLE_CACHE=1 mocha --file test/unit/bootstrap.js --loader=babel-register-esm",
     "build": "cross-env NODE_ENV=production webpack",
-    "build-dev": "cross-env NODE_ENV=development webpack",
-    "transpile": "npm run transpile --workspaces && cross-env BABEL_DISABLE_CACHE=1 babel src --out-dir lib",
-    "start": "cross-env NODE_ENV=development webpack serve --no-cache",
-    "start-https": "cross-env NODE_ENV=development webpack serve --https",
-    "debug": "cross-env noInline=true npm start",
-    "prepublishOnly": "npm run build && npm run transpile",
-    "prepare": "cross-env NO_UPDATE_NOTIFIER=true node ./config/prepare.mjs && node ./config/replace.config.mjs",
-    "watch": "cross-env BABEL_DISABLE_CACHE=1 babel --watch src --out-dir lib",
-    "changelog": "conventional-changelog -n ./config/conventionalChangelog/config.cjs -i changelog.md -s",
-    "bump": "if [ -z $npm_config_level ]; then grunt bump:minor;  else grunt bump:$npm_config_level; fi && npm run changelog && npm run update-packages && npm install && git add -A && git commit --amend --no-edit",
-    "publish-next": "npm version prerelease --preid next && npm publish --access public --tag=next --provenance",
-    "publish-latest": "npm publish --access public --tag=latest --provenance",
-    "update-packages": "npm update @itowns/geodesy --save"
-  },
-  "c8": {
-    "exclude": [
-      "**/test/**",
-      "**/lib/**",
-      "**/*ThreeExtended",
-      "**/*src/Utils/placeObjectOnGround.js",
-      "**/*src/Parser/deprecated/LegacyGLTFLoader.js"
-    ]
+    "build-dev": "cross-env NODE_ENV=development webpack"
   },
   "files": [
     "*.md",

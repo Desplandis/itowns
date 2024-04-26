@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import Coordinates from 'Coordinates';
-import CRS from 'Crs';
+import Coordinates from './Coordinates.js';
+import CRS from './Crs.js';
 
 /**
  * Extent is a SIG-area (so 2D)

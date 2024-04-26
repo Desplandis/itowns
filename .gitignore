@@ -12,3 +12,6 @@ potree
 **/coverage
 .nyc_output/
 /src/ThreeExtended/
+CREP.md
+log.txt
+yarn.lock
