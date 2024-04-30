@@ -19,7 +19,7 @@
     "doclint": "npm run doc -- -t templates/silent",
     "test": "npm run test-unit && npm run build && npm run test-functional",
     "test-dev": "npm run test-unit && npm run build-dev && npm run test-functional",
-    "test-functional": "mocha -t 100000 --require test/hooks_functional.js --recursive test/functional",
+    "test-functional": "npm run build && mocha -t 100000 --require test/hooks_functional.js --recursive test/functional",
     "test-with-coverage": "npm run test-with-coverage --workspaces --t=true",
     "clean-coverage": "node -e \"require('fs-extra').emptyDir('coverage');\"",
     "test-with-coverage_lcov": "npm run clean-coverage && npm run test-with-coverage_lcov --workspaces --t=true && c8 report --reporter=lcov",
