@@ -1,7 +1,4 @@
-import { CONTROL_EVENTS } from 'Controls/GlobeControls';
-import { GLOBE_VIEW_EVENTS } from 'Core/Prefab/GlobeView';
-import { PLANAR_CONTROL_EVENT } from 'Controls/PlanarControls';
-import { VIEW_EVENTS } from 'Core/View';
+import { CONTROL_EVENTS, GLOBE_VIEW_EVENTS, PLANAR_CONTROL_EVENT, VIEW_EVENTS } from 'itowns';
 import Widget from './Widget';
 
 

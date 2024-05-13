@@ -1,4 +1,4 @@
-import Fetcher from 'Provider/Fetcher';
+import { Fetcher } from 'itowns';
 import Widget from './Widget';
 
 

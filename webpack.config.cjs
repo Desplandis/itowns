@@ -27,6 +27,7 @@ const include = [
     path.resolve(__dirname, './packages/Main/test'),
     path.resolve(__dirname, 'utils'),
     path.resolve(__dirname, 'packages/Geodesy/src'),
+    path.resolve(__dirname, './packages/Gui/src'),
 ];
 
 const exclude = [
@@ -62,7 +63,7 @@ module.exports = () => {
                 dependOn: 'itowns',
             },
             itowns_widgets: {
-                import: './packages/Main/src/Utils/gui/Main.js',
+                import: './packages/Gui/src/Main.js',
                 dependOn: 'itowns',
             },
         },

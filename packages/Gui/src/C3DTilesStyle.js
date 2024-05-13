@@ -1,5 +1,4 @@
-import Style from 'Core/Style';
-import { C3DTILES_LAYER_EVENTS } from 'Layer/C3DTilesLayer';
+import { Style, C3DTILES_LAYER_EVENTS } from 'itowns';
 import Widget from './Widget';
 
 const DEFAULT_OPTIONS = {

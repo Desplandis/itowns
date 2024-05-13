@@ -6,7 +6,8 @@
   "type": "module",
   "workspaces": [
     "packages/Geodesy",
-    "packages/Main"
+    "packages/Main",
+    "packages/Gui"
   ],
   "scripts": {
     "test-unit": "npm run test-unit --workspaces --t=true",
@@ -27,7 +28,7 @@
     "debug": "cross-env noInline=true npm start",
     "prepublishOnly": "npm run build && npm run transpile",
     "prepare": "cross-env NO_UPDATE_NOTIFIER=true node ./config/prepare.mjs && node ./config/replace.config.mjs",
-    "watch": "npm run watch --workspace itowns & npm run watch --workspace @itowns/geodesy",
+    "watch": "npm run watch --workspace itowns & npm run watch --workspace @itowns/geodesy & npm run watch --workspace @itowns/debug & npm run watch --workspace @itowns/gui",
     "changelog": "conventional-changelog -n ./config/conventionalChangelog/config.cjs -i changelog.md -s",
     "bump": "if [ -z $npm_config_level ]; then grunt bump:minor;  else grunt bump:$npm_config_level; fi && npm run changelog && npm run update-packages && npm install && git add -A && git commit --amend --no-edit",
     "publish-next": "npm version prerelease --preid next && npm publish --access public --tag=next --provenance",
@@ -40,7 +41,8 @@
       "**/lib/**",
       "**/*ThreeExtended",
       "**/*src/Utils/placeObjectOnGround.js",
-      "**/*src/Parser/deprecated/LegacyGLTFLoader.js"
+      "**/*src/Parser/deprecated/LegacyGLTFLoader.js",
+      "**/packages/Gui/"
     ]
   },
   "repository": {

@@ -4,9 +4,11 @@
   "description": "A JS/WebGL framework for 3D geospatial data visualization",
   "type": "module",
   "main": "lib/Main.js",
+  "itowns_exports": {
+    ".": "./src/Main.js"
+  },
   "exports": {
-    ".": "./lib/Main.js",
-    "./widgets": "./lib/Utils/gui/Main.js"
+    ".": "./lib/Main.js"
   },
   "scripts": {
     "lint": "eslint \"src/**/*.js\" \"test/**/*.js\"",
