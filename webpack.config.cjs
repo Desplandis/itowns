@@ -23,8 +23,8 @@ const babelConf = {
 };
 
 const include = [
-    path.resolve(__dirname, 'src'),
-    path.resolve(__dirname, 'test'),
+    path.resolve(__dirname, './packages/Main/src'),
+    path.resolve(__dirname, './packages/Main/test'),
     path.resolve(__dirname, 'utils'),
     path.resolve(__dirname, 'packages/Geodesy/src'),
 ];
@@ -55,14 +55,14 @@ module.exports = () => {
         entry: {
             itowns: [
                 'core-js',
-                './src/MainBundle.js',
+                './packages/Main/src/MainBundle.js',
             ],
             debug: {
                 import: './utils/debug/Main.js',
                 dependOn: 'itowns',
             },
             itowns_widgets: {
-                import: './src/Utils/gui/Main.js',
+                import: './packages/Main/src/Utils/gui/Main.js',
                 dependOn: 'itowns',
             },
         },

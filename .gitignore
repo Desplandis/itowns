@@ -4,7 +4,7 @@
 # See https://github.com/github/gitignore/tree/master/Global for a list of global ignore rules.
 
 /node_modules/
-/dist/
+/packages/Main/dist/
 /potree/
 potree
 /lib/
@@ -13,4 +13,4 @@ packages/**/lib/
 coverage
 packages/**/coverage
 .nyc_output/
-/src/ThreeExtended/
+**/src/ThreeExtended/
