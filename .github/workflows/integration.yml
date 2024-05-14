@@ -1,5 +1,6 @@
 name: integration
 
+
 on:
   push:
     branches:
@@ -8,7 +9,6 @@ on:
     branches:
       - master
   workflow_dispatch: {}
-
 
 jobs:
 
@@ -96,6 +96,8 @@ jobs:
         run: npm ci
 
       - name: Run unit tests
+        env:
+          COVERALLS_PARALLEL: true
         run: npm run test-with-coverage_lcov
 
       # Code coverage
@@ -103,6 +105,7 @@ jobs:
         if: ${{ success() }}
         uses: coverallsapp/github-action@master
         with:
+          parallel-finished: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
 
