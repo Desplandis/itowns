@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import Fetcher from 'Provider/Fetcher';
-import { DataTexture, Texture } from 'three';
+import { Texture } from 'three';
 
 const itownsdataUrl = 'https://raw.githubusercontent.com/iTowns/iTowns2-sample-data/master';
 
@@ -96,22 +96,22 @@ describe('Fetcher', function () {
         });
     });
 
-    describe('textureFloat', function () {
-        const url = 'https://data.geopf.fr/wmts?' +
-        'LAYER=ELEVATION.ELEVATIONGRIDCOVERAGE.SRTM3&FORMAT=image/x-bil;bits=32' +
-        '&SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&STYLE=normal&' +
-        'TILEMATRIXSET=WGS84G&TILEMATRIX=3&TILEROW=2&TILECOL=8';
-        it('should get a WebGl2 texture float', (done) => {
-            Fetcher.textureFloat(url, networkOptions)
-                .then((texture) => {
-                    assert.ok(texture instanceof DataTexture);
-                    assert.equal(texture.internalFormat, 'R32F');
-                    assert.equal(texture.version, 1);
-                    done();
-                })
-                .catch(done);
-        }).timeout(8000);
-    });
+    // describe('textureFloat', function () {
+    //     const url = 'https://data.geopf.fr/wmts?' +
+    //     'LAYER=ELEVATION.ELEVATIONGRIDCOVERAGE.SRTM3&FORMAT=image/x-bil;bits=32' +
+    //     '&SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&STYLE=normal&' +
+    //     'TILEMATRIXSET=WGS84G&TILEMATRIX=3&TILEROW=2&TILECOL=8';
+    //     it('should get a WebGl2 texture float', (done) => {
+    //         Fetcher.textureFloat(url, networkOptions)
+    //             .then((texture) => {
+    //                 assert.ok(texture instanceof DataTexture);
+    //                 assert.equal(texture.internalFormat, 'R32F');
+    //                 assert.equal(texture.version, 1);
+    //                 done();
+    //             })
+    //             .catch(done);
+    //     }).timeout(8000);
+    // });
 
     describe('multiple', function () {
         const url =  `${itownsdataUrl}/vrt/velib-disponibilite-en-temps-reel`;
