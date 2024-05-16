@@ -129,13 +129,6 @@ jobs:
       with:
         parallel-finished: true
         github-token: ${{ secrets.GITHUB_TOKEN }}
-    - name: toto
-      run: echo ${{ secrets.COVERALLS_REPO_TOKEN }}
-    - name: Rerun coverage workaround
-      run : curl -k https://coveralls.io/webhook?repo_token=${{ secrets.COVERALLS_REPO_TOKEN }} -d "payload[build_num]=${{ github.run_id }}&payload[status]=done"
-      # run: curl --location --request GET 'https://coveralls.io/rerun_build?repo_token=${{ secrets.GITHUB_TOKEN }}&build_num=${{ github.run_id }}'
-        # from https://github.com/lemurheavy/coveralls-public/issues/1653#issuecomment-1251587119
-
   # Functional tests
   functional-tests:
     name: Functional tests
