@@ -3,10 +3,9 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.resolve('./');
-const fileItowns = `${root}/packages/Main/src/Parser/PntsParser.js`;
+const fileItowns = `${root}/src/Parser/PntsParser.js`;
 const fileGeodesy = `${root}/packages/Geodesy/src/OrientationUtils.js`;
-const fileGUI = `${root}/packages/Gui/src/Main.js`;
-const fileDebug = `${root}/packages/Debug/src/GeometryDebug.js`;
+const fileDebug = `${root}/utils/debug/GeometryDebug.js`;
 
 console.warn(fs.existsSync(fileItowns), fs.existsSync(fileGeodesy));
 
@@ -40,6 +39,4 @@ async function test(file) {
 console.warn('----');
 test(fileItowns).then(c => console.warn(c));
 test(fileGeodesy).then(c => console.warn(c));
-test(fileGUI).then(c => console.warn(c));
 test(fileDebug).then(c => console.warn(c));
-
