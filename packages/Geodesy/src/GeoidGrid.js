@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import Coordinates from 'Coordinates';
-import CRS from 'Crs';
+import Coordinates from './Coordinates';
+import CRS from './Crs';
 
 
 const coord = new Coordinates('EPSG:4326');

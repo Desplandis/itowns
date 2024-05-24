@@ -4,12 +4,7 @@
   "description": "Geodesy",
   "type": "module",
   "main": "lib/Main.js",
-  "itowns_exports": {
-    ".": "./src/Main.js"
-  },
-  "exports": {
-    ".": "./lib/Main.js"
-  },
+  "exports": "./lib/Main.js",
   "scripts": {
     "lint": "eslint \"src/**/*.js\" \"test/**/*.js\"",
     "transpile": "cross-env BABEL_DISABLE_CACHE=1 babel src --out-dir lib",
@@ -22,7 +17,6 @@
   },
   "files": [
     "*.md",
-    "src",
     "lib"
   ],
   "repository": {
