@@ -8,7 +8,9 @@
         }]
     ],
     "plugins": [
-        ["module-resolver",  { "root": ["./src"] } ],
+        ["module-resolver", {
+            "root": [".", "./src"]
+        }],
         ["babel-plugin-inline-import", {
             "extensions": [
                 ".json",
