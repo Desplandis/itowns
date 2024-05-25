@@ -8,6 +8,10 @@
         }]
     ],
     "plugins": [
+        ["module-resolver", {
+            "cwd": "packagejson",
+            "root": ["src"]
+        }],
         ["module-extension-resolver"]
     ]
 }

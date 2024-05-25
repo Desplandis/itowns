@@ -1,5 +1,5 @@
 // Geographic tools
-export { default as Extent, globalExtentTMS, schemeTiles } from './Extent';
+export { default as Extent, globalExtentTMS, schemeTiles } from 'Extent';
 export { default as Coordinates } from './Coordinates';
 export { default as GeoidGrid } from './GeoidGrid';
 export { default as CRS } from './Crs';

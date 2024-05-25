@@ -7,7 +7,7 @@
   "exports": "./lib/Main.js",
   "scripts": {
     "lint": "eslint \"src/**/*.js\" \"test/**/*.js\"",
-    "transpile": "cross-env BABEL_DISABLE_CACHE=1 babel src --out-dir lib",
+    "transpile": "cross-env BABEL_DISABLE_CACHE=1 babel --root-mode upward src -d lib",
     "test-unit": "npm run base-test-unit test/unit",
     "base-test-unit": "cross-env BABEL_DISABLE_CACHE=1 mocha --loader=babel-register-esm",
     "test-with-coverage": "c8 -n src -r html cross-env npm run test-unit",
