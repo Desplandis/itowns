@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import CRS from 'Core/Geographic/Crs';
+import { tiledCovering } from 'Core/Geographic/Tile';
 import { geoidLayerIsVisible } from 'Layer/GeoidLayer';
 
 /**
@@ -34,7 +35,7 @@ class TileMesh extends THREE.Mesh {
         this.obb.box3D.getBoundingSphere(this.boundingSphere);
 
         for (const tms of layer.tileMatrixSets) {
-            this.#_tms.set(tms, this.extent.tiledCovering(tms));
+            this.#_tms.set(tms, tiledCovering(this.extent, tms));
         }
 
         this.frustumCulled = false;

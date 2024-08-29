@@ -1,9 +1,10 @@
 import Source from 'Source/Source';
 import URLBuilder from 'Provider/URLBuilder';
-import Extent, { globalExtentTMS } from 'Core/Geographic/Extent';
+import Extent from 'Core/Geographic/Extent';
+import Tile, { globalExtentTMS } from 'Core/Geographic/Tile';
 import CRS from 'Core/Geographic/Crs';
 
-const extent = new Extent(CRS.tms_4326, 0, 0, 0);
+const extent = new Tile(CRS.tms_4326, 0, 0, 0);
 
 /**
  * @classdesc
