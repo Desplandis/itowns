@@ -30,6 +30,13 @@ for (let i = cardinals.length - 1; i >= 0; i--) {
 
 const _c = new Coordinates('EPSG:4326', 0, 0);
 
+export interface ExtentLike {
+    readonly west: number;
+    readonly east: number;
+    readonly south: number;
+    readonly north: number;
+}
+
 class Extent {
     readonly isExtent: true;
     crs: ProjectionLike;
@@ -39,11 +46,9 @@ class Extent {
     north: number;
 
     /**
-     * Extent is geographical bounding rectangle defined by 4 limits: west,
-     * east, south and north.
+     * Extent is geographical bounding rectangle defined by 4 limits: west, east, south and north.
      *
-     * Warning, using geocentric projection isn't consistent with geographical
-     * extent.
+     * Warning, using geocentric projection isn't consistent with geographical extent.
      *
      * @param {String} crs projection of limit values.
      * @param {number|Array.<number>|Coordinates|Object} v0 west value, Array
@@ -54,12 +59,7 @@ class Extent {
      * @param {number} [v2] south value
      * @param {number} [v3] north value
      */
-    constructor(
-        crs: ProjectionLike,
-        v0: number = 0,
-        v1: number = 0,
-        v2: number = 0,
-        v3: number = 0) {
+    constructor(crs: ProjectionLike, v0 = 0, v1 = 0, v2 = 0, v3: number = 0) {
         if (CRS.isGeocentric(crs)) {
             throw new Error(`${crs} is a geocentric projection, it doesn't make sense with a geographical extent`);
         }
@@ -151,8 +151,7 @@ class Extent {
 
     /**
      *  Planar dimensions are two planar distances west/east and south/north.
-     *  Planar distance straight-line Euclidean distance calculated in a 2D
-     *  Cartesian coordinate system.
+     *  Planar distance straight-line Euclidean distance calculated in a 2D Cartesian coordinate system.
      *
      * @param      {THREE.Vector2}  [target=new THREE.Vector2()]  The target
      * @return     {THREE.Vector2}  Planar dimensions
@@ -191,8 +190,7 @@ class Extent {
     }
 
     /**
-     *  Spatial euclidean dimensions are two spatial euclidean distances between
-     *  west/east corner and south/north corner.
+     *  Spatial euclidean dimensions are two spatial euclidean distances between west/east corner and south/north corner.
      *  Spatial euclidean distance chord is calculated in a ellispoid space.
      *
      * @param      {THREE.Vector2}  [target=new THREE.Vector2()]  The target
@@ -257,13 +255,11 @@ class Extent {
     }
 
     /**
-     * Return the translation and scale to transform this extent to input
-     * extent.
+     * Return the translation and scale to transform this extent to input extent.
      *
      * @param {Extent} extent input extent
      * @param {THREE.Vector4} target copy the result to target.
-     * @return {THREE.Vector4} {x: translation on west-east, y: translation on
-     * south-north, z: scale on west-east, w: scale on south-north}
+     * @return {THREE.Vector4} {x: translation on west-east, y: translation on south-north, z: scale on west-east, w: scale on south-north}
      */
     offsetToParent(extent: Extent, target = new THREE.Vector4()) {
         if (this.crs != extent.crs) {
@@ -306,7 +302,6 @@ class Extent {
      * @returns {Extent}
      */
     intersect(extent: Extent): Extent {
-        // TODO[QB]: Shall be named intersection
         if (!this.intersectsExtent(extent)) {
             return new Extent(this.crs, 0, 0, 0, 0);
         }
@@ -334,28 +329,14 @@ class Extent {
      *
      * @return {Extent}
      */
-    set(v0, v1, v2, v3) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    set(v0: any, v1: any, v2: any, v3: any) {
         if (v0 == undefined) {
             throw new Error('No values to set in the extent');
         }
-        if (v0.isExtent) {
-            v1 = v0.east;
-            v2 = v0.south;
-            v3 = v0.north;
-            v0 = v0.west;
-        }
 
-        if (v0.isCoordinates) {
-            // seem never used
-            this.west = v0.x;
-            this.east = v1.x;
-            this.south = v0.y;
-            this.north = v1.y;
-        } else if (v0.west !== undefined) {
-            this.west = v0.west;
-            this.east = v0.east;
-            this.south = v0.south;
-            this.north = v0.north;
+        if (v0.isExtent) {
+            this.setFromExtent(v0);
         } else if (v0.length == 4) {
             this.setFromArray(v0);
         } else if (v3 !== undefined) {
@@ -369,10 +350,18 @@ class Extent {
     }
 
     setFromArray(array: ArrayLike<number>, offset: number = 0): this {
-        this.west = array[offset + 0];
+        this.west = array[offset];
         this.east = array[offset + 1];
         this.south = array[offset + 2];
         this.north = array[offset + 3];
+        return this;
+    }
+
+    setFromExtent(extent: ExtentLike): this {
+        this.west = extent.west;
+        this.east = extent.east;
+        this.south = extent.south;
+        this.north = extent.north;
         return this;
     }
 
@@ -480,7 +469,7 @@ class Extent {
             cNorthEast.setFromVector3(box.max).as(crs, cNorthEast).toVector3(box.max);
         }
 
-        return new Extent(crs, {
+        return new Extent(crs).setFromExtent({
             west: box.min.x,
             east: box.max.x,
             south: box.min.y,
