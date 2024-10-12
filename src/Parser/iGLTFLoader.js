@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import LegacyGLTFLoader from 'Parser/deprecated/LegacyGLTFLoader';
-import { GLTFLoader } from 'ThreeExtended/loaders/GLTFLoader';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 class iGLTFLoader extends THREE.Loader {
     /**

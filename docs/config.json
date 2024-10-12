@@ -194,7 +194,7 @@
     },
     "source": {
         "include": [ "src", "examples/js/plugins" ],
-        "exclude": [ "src/ThreeExtended" ]
+        "exclude": []
     },
     "plugins": ["plugins/markdown"]
 }

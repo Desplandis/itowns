@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import {
     TilesRenderer,
     GLTFStructuralMetadataExtension,
@@ -11,8 +13,6 @@ import {
 
 import GeometryLayer from 'Layer/GeometryLayer';
 import iGLTFLoader from 'Parser/iGLTFLoader';
-import { DRACOLoader } from 'ThreeExtended/loaders/DRACOLoader';
-import { KTX2Loader } from 'ThreeExtended/loaders/KTX2Loader';
 import ReferLayerProperties from 'Layer/ReferencingLayerProperties';
 import PointsMaterial, {
     PNTS_MODE,

@@ -35,7 +35,6 @@
   },
   "c8": {
     "exclude": [
-      "**/*ThreeExtended",
       "**/*src/Utils/placeObjectOnGround.js",
       "**/*src/Parser/deprecated/LegacyGLTFLoader.js"
     ]
@@ -99,7 +98,6 @@
     "chart.js": "^4.4.4",
     "compare-func": "^2.0.0",
     "conventional-changelog-cli": "^4.1.0",
-    "copyfiles": "^2.4.1",
     "core-js": "^3.38.1",
     "cross-env": "^7.0.3",
     "eslint": "^8.55.0",

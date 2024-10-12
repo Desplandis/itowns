@@ -5,9 +5,9 @@
  */
 
 import * as THREE from 'three';
+import WEBGL from 'three/examples/jsm/capabilities/WebGL.js';
 import Capabilities from 'Core/System/Capabilities';
 import { unpack1K } from 'Renderer/LayeredMaterial';
-import WEBGL from 'ThreeExtended/capabilities/WebGL';
 import Label2DRenderer from 'Renderer/Label2DRenderer';
 import { deprecatedC3DEngineWebGLOptions } from 'Core/Deprecated/Undeprecator';
 

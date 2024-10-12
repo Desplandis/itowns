@@ -91,15 +91,7 @@ module.exports = {
         'no-multi-spaces': 'off',
         'import/no-cycle': 'off',
         'import/no-useless-path-segments': 'off',
-        'import/extensions': [
-            'error',
-            'ignorePackages',
-            {
-                'js': 'never',
-                'ts': 'never',
-                'tsx': 'never',
-            },
-        ],
+        'import/extensions': 'off',
         camelcase: 'off',
         'switch-colon-spacing': 'off',
         'lines-between-class-members': 'off',

@@ -1,8 +1,8 @@
 import assert from 'assert';
 import fs from 'fs';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import iGLTFLoader from 'Parser/iGLTFLoader';
-import { DRACOLoader } from 'ThreeExtended/loaders/DRACOLoader';
-import { KTX2Loader } from 'ThreeExtended/loaders/KTX2Loader';
 
 describe('iGLTFLoader', function () {
     const gltfLoader = new iGLTFLoader();
