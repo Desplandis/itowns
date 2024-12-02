@@ -28,7 +28,7 @@
   "dependencies": {
     "chart.js": "^4.4.4",
     "dat.gui": "^0.7.9",
-    "itowns": "^2.44.2",
+    "itowns-desplandis-main": "^2.44.2",
     "@tweenjs/tween.js": "^25.0.0"
   },
   "peerDependencies": {
