@@ -47,7 +47,7 @@
     "url": "https://github.com/iTowns/itowns/issues"
   },
   "dependencies": {
-    "itowns-desplandis-geographic": "^2.44.2",
+    "@itowns/geographic": "npm:itowns-desplandis-geographic@^2.44.2",
     "@mapbox/mapbox-gl-style-spec": "^13.28.0",
     "@mapbox/vector-tile": "^2.0.3",
     "@tmcw/togeojson": "^5.8.1",
