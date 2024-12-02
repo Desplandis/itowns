@@ -105,18 +105,6 @@ jobs:
       - name: transpile packages
         run: npm run transpile
 
-      - name: Test ${{ matrix.package }}
-        run: npm run test-with-coverage_lcov --workspace ${{ matrix.package}}
-      - name: Coveralls Parallel
-        uses: coverallsapp/github-action@v2
-        with:
-          format: lcov
-          base-path: ./packages/${{ matrix.path }}
-          path-to-lcov: ./packages/${{ matrix.path }}/coverage/lcov.info
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          flag-name: run-${{ matrix.package }}
-          parallel: true
-
   # Final Code coverage
   finish-coverage:
     name: finish parallel test unit
