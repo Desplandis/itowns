@@ -176,13 +176,13 @@ class Layer extends THREE.EventDispatcher {
         this.ready = false;
 
         /**
-         * @type {Promise<any>[]}
+         * @type {Promise[]}
          * @protected
          */
         this._promises = [];
 
         /**
-         * @type {Promise<this>}
+         * @type {Promise}
          */
         this.whenReady = new Promise((re, rj) => {
             this._resolve = re;
