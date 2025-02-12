@@ -83,9 +83,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - package: "@itowns/geographic"
+          - package: "monorepo-itowns-geo"
             path: "Geographic"
-          - package: "itowns"
+          - package: "monorepo-itowns"
             path: "Main"
     steps:
 
@@ -162,6 +162,7 @@ jobs:
     name: Publish NPM package
     if: ${{ github.ref == 'refs/heads/master' }}
     needs: [finish-coverage, functional-tests]
+    # needs: [build, check-commit-message]
     runs-on: ubuntu-latest
     permissions:
         # id-token: write permission is required for npm provenance:
@@ -221,7 +222,8 @@ jobs:
   deploy:
     name: Deploy to itowns.github.io
     if: ${{ github.ref == 'refs/heads/master' }}
-    needs: [finish-coverage, functional-tests]
+    # needs: [finish-coverage, functional-tests]
+    needs: [build, check-commit-message]
     runs-on: ubuntu-latest
     steps:
 
@@ -256,7 +258,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
-          external_repository: iTowns/itowns.github.io
+          external_repository: desplandis/itowns.github.io
           publish_dir: ./itowns
           destination_dir: ./itowns
           publish_branch: master
@@ -271,7 +273,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
-          external_repository: iTowns/itowns.github.io
+          external_repository: desplandis/itowns.github.io
           publish_dir: ./itowns
           destination_dir: ./itowns/dev
           publish_branch: master
@@ -283,6 +285,7 @@ jobs:
     name: Release GitHub
     if: ${{ github.ref == 'refs/heads/master' && startsWith( github.event.head_commit.message, 'release v' ) }}
     needs: [finish-coverage, functional-tests]
+    # needs: [build, check-commit-message]
     runs-on: ubuntu-latest
     steps:
 

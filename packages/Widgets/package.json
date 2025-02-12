@@ -14,7 +14,7 @@
     "transpile": "npm run transpileOnly && npm run copy_transpile",
     "watch": "npm run transpileOnly -- --watch",
     "prerelease-next": "npm version prerelease --preid next",
-    "update-package": "npm remove @itowns/geographic itowns && npm install @itowns/geographic@$npm_package_version itowns@$npm_package_version --save"
+    "update-package": "npm remove monorepo-itowns-geo monorepo-itowns && npm install monorepo-itowns-geo@$npm_package_version monorepo-itowns@$npm_package_version --save"
   },
   "files": [
     "*.md",
@@ -30,8 +30,8 @@
     "url": "https://github.com/itowns/itowns/issues"
   },
   "dependencies": {
-    "@itowns/geographic": "^2.44.2",
-    "itowns": "^2.44.2"
+    "monorepo-itowns-geo": "^2.44.2",
+    "monorepo-itowns": "^2.44.2"
   },
   "homepage": "https://itowns.github.io/"
 }

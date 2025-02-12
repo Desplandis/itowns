@@ -1,5 +1,5 @@
 {
-  "name": "itowns",
+  "name": "monorepo-itowns",
   "version": "2.44.2",
   "description": "A JS/WebGL framework for 3D geospatial data visualization",
   "type": "module",
@@ -21,7 +21,7 @@
     "publish-latest": "npm publish --access public --tag=latest --provenance",
     "prerelease-next": "npm version prerelease --preid next",
     "publish-next": "npm publish --access public --tag=next --provenance",
-    "update-package": "npm remove @itowns/geographic && npm install @itowns/geographic@$npm_package_version --save"
+    "update-package": "npm remove monorepo-itowns-geo && npm install monorepo-itowns-geo@$npm_package_version --save"
   },
   "c8": {
     "exclude": [
@@ -48,7 +48,7 @@
     "url": "https://github.com/iTowns/itowns/issues"
   },
   "dependencies": {
-    "@itowns/geographic": "^2.44.2",
+    "monorepo-itowns-geo": "^2.44.2",
     "@mapbox/vector-tile": "^2.0.3",
     "@maplibre/maplibre-gl-style-spec": "^22.0.0",
     "@tmcw/togeojson": "^5.8.1",
