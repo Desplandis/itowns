@@ -55,11 +55,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iTowns/itowns.git"
+    "url": "git+https://github.com/desplandis/itowns.git"
   },
   "license": "(CECILL-B OR MIT)",
   "bugs": {
-    "url": "https://github.com/iTowns/itowns/issues"
+    "url": "https://github.com/desplandis/itowns/issues"
   },
   "homepage": "https://itowns.github.io/",
   "devDependencies": {
