@@ -94,11 +94,21 @@ class MainLoop extends EventDispatcher {
     #needsRedraw = false;
     #updateLoopRestarted = true;
     #lastTimestamp = 0;
+    view;
+
     constructor(scheduler, engine) {
         super();
         this.renderingState = RENDERING_PAUSED;
         this.scheduler = scheduler;
         this.gfxEngine = engine; // TODO: remove me
+        this.gfxEngine.renderer.setAnimationLoop((timestamp) => {
+            if (this.gfxEngine.renderer.xr.isPresenting && this.view.camera.camera3D.cameras[0]) {
+                this.view.camera.camera3D.updateMatrix();
+                this.view.camera.camera3D.updateMatrixWorld(true);
+                this.view.notifyChange(this.view.camera.camera3D, true);
+            }
+            this.step(this.view, timestamp);
+        });
     }
 
     scheduleViewUpdate(view, forceRedraw) {
@@ -111,12 +121,14 @@ class MainLoop extends EventDispatcher {
                 document.title += ' ⌛';
             }
 
+            this.view = view;
+
             // TODO Fix asynchronization between xr and MainLoop render loops.
             // WebGLRenderer#setAnimationLoop must be used for WebXR projects.
             // (see WebXR#initializeWebXR).
-            if (!this.gfxEngine.renderer.xr.isPresenting) {
-                requestAnimationFrame((timestamp) => { this.step(view, timestamp); });
-            }
+            // if (!this.gfxEngine.renderer.xr.isPresenting) {
+            //     requestAnimationFrame((timestamp) => { this.step(view, timestamp); });
+            // }
         }
     }
 

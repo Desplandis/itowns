@@ -23,8 +23,11 @@
         <script src="../dist/itowns.js"></script>
 
         <script type="module">
+            const { MAIN_LOOP_EVENTS } = itowns;
+            console
 
             import { VRButton } from 'three/addons/webxr/VRButton.js';
+            import Stats from 'three/addons/libs/stats.module.js';
 
             // ---------- SETUP THE VR VIEW : ----------
 
@@ -39,10 +42,16 @@
             // `viewerDiv` will contain iTowns' rendering area (`<canvas>`)
             const viewerDiv = document.getElementById('viewerDiv');
 
+            const stats = new Stats();
+            viewerDiv.appendChild(stats.dom);
+
             // Create a GlobeView
             const view = new itowns.GlobeView(viewerDiv, placement, {
                 webXR: { scale: 0.005 },
             });
+            view.addFrameRequester(MAIN_LOOP_EVENTS.UPDATE_START, (dt) => {
+                stats.update();
+            })
             // Temporary workaround to https://github.com/iTowns/itowns/issues/2473
             view.scene.matrixWorldAutoUpdate = true;
 
@@ -67,9 +76,9 @@
             // Here again, each layer's properties are defined in a json file.
             function addElevationLayerFromConfig(config) {
                 config.source = new itowns.WMTSSource(config.source);
-                view.addLayer(
-                    new itowns.ElevationLayer(config.id, config),
-                );
+                // view.addLayer(
+                //     new itowns.ElevationLayer(config.id, config),
+                // );
             }
             itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json')
                 .then(addElevationLayerFromConfig);

@@ -47,18 +47,6 @@ const initializeWebXR = (view, options) => {
         view.camera.resize(view.camera.width, view.camera.height);
 
         document.addEventListener('keydown', exitXRSession, false);
-
-        // TODO Fix asynchronization between xr and MainLoop render loops.
-        // (see MainLoop#scheduleViewUpdate).
-        xr.setAnimationLoop((timestamp) => {
-            if (xr.isPresenting && view.camera.camera3D.cameras[0]) {
-                view.camera.camera3D.updateMatrix();
-                view.camera.camera3D.updateMatrixWorld(true);
-                view.notifyChange(view.camera.camera3D, true);
-            }
-
-            view.mainLoop.step(view, timestamp);
-        });
     });
 };
 
