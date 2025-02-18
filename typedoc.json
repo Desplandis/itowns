@@ -1,0 +1,25 @@
+{
+    "$schema": "https://typedoc.org/schema.json",
+    // "excludeNotDocumented": true,
+    // "excludeNotDocumentedKinds": [],
+    "excludeExternals": true,
+    "excludeInternal": true,
+    "excludePrivate": true,
+    "excludeReferences": true,
+    "out": "docs/out",
+    "name": "iTowns Documentation",
+    "includeVersion": true,
+    "disableSources": true,
+    "readme": "none",
+    "githubPages": true,
+    "entryPointStrategy": "packages",
+    "entryPoints": [
+        "packages/Geographic",
+        "packages/Main"
+    ],
+    "packageOptions": {
+      "entryPoints": ["src/Main.js"]
+    },
+
+    "logLevel": "Verbose"
+}
