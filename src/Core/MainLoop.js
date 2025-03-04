@@ -94,6 +94,7 @@ class MainLoop extends EventDispatcher {
     #needsRedraw = false;
     #updateLoopRestarted = true;
     #lastTimestamp = 0;
+    #accumulator = 0;
     view;
 
     constructor(scheduler, engine) {
@@ -103,7 +104,7 @@ class MainLoop extends EventDispatcher {
         this.gfxEngine = engine; // TODO: remove me
         this.gfxEngine.renderer.setAnimationLoop((timestamp) => {
             this.#needsRedraw = true;
-            this.step(this.view, timestamp);
+            this.step2(this.view, timestamp);
         });
     }
 
@@ -164,6 +165,50 @@ class MainLoop extends EventDispatcher {
                 view.execFrameRequesters(MAIN_LOOP_EVENTS.AFTER_LAYER_UPDATE, dt, this.#updateLoopRestarted, geometryLayer);
             }
         }
+    }
+
+    step2(view, timestamp) {
+        const dt = timestamp - this.#lastTimestamp;
+        this.#lastTimestamp = timestamp;
+        this.#accumulator += dt;
+
+        view._executeFrameRequestersRemovals();
+        view.execFrameRequesters(MAIN_LOOP_EVENTS.UPDATE_START, dt, this.#updateLoopRestarted);
+
+        // update camera
+        const dim = this.gfxEngine.getWindowSize();
+        view.execFrameRequesters(MAIN_LOOP_EVENTS.BEFORE_CAMERA_UPDATE, dt, this.#updateLoopRestarted);
+        view.camera.update(dim.x, dim.y);
+        view.execFrameRequesters(MAIN_LOOP_EVENTS.AFTER_CAMERA_UPDATE, dt, this.#updateLoopRestarted);
+
+        const timestep = 1000 / 30;
+        while (this.#accumulator >= timestep) {
+            const updateSources = new Set(view._changeSources);
+            view._changeSources.clear();
+
+            // Disable camera's matrix auto update to make sure the camera's
+            // world matrix is never updated mid-update.
+            // Otherwise inconsistencies can appear because object visibility
+            // testing and object drawing could be performed using different
+            // camera matrixWorld.
+            // Note: this is required at least because WEBGLRenderer calls
+            // camera.updateMatrixWorld()
+            const oldAutoUpdate = view.camera3D.matrixAutoUpdate;
+            view.camera3D.matrixAutoUpdate = false;
+
+            // update data-structure
+            this.#update(view, updateSources, dt);
+
+            if (this.scheduler.commandsWaitingExecutionCount() == 0) {
+                this.dispatchEvent({ type: 'command-queue-empty' });
+            }
+
+            view.camera3D.matrixAutoUpdate = oldAutoUpdate;
+
+            this.#accumulator -= timestep;
+        }
+
+        this.#renderView(view, dt);
     }
 
     step(view, timestamp) {
