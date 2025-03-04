@@ -24,8 +24,10 @@
         <script src="../dist/itowns.js"></script>
 
         <script type="module">
+            const { MAIN_LOOP_EVENTS } = itowns;
 
             import { VRButton } from 'three/addons/webxr/VRButton.js';
+            import Stats from 'three/addons/libs/stats.module.js';
 
             // ---------- SETUP THE VR VIEW : ----------
 
@@ -40,8 +42,14 @@
             // `viewerDiv` will contain iTowns' rendering area (`<canvas>`)
             const viewerDiv = document.getElementById('viewerDiv');
 
+            const stats = new Stats();
+            viewerDiv.appendChild(stats.dom);
+
             // Create a GlobeView
             const view = new itowns.GlobeView(viewerDiv, placement, { webXR: { controllers: true } });
+            view.addFrameRequester(MAIN_LOOP_EVENTS.UPDATE_START, (dt) => {
+                stats.update();
+            })
 
             // Instantiate three's VR Button
             const vrButton = VRButton.createButton(view.renderer);

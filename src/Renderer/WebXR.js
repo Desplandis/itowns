@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import VRControls from 'Controls/VRControls';
+import { MAIN_LOOP_EVENTS } from 'Core/MainLoop';
 
 // TODO handle xr session end
 
@@ -45,9 +46,7 @@ const initializeWebXR = (view, options) => {
             vrControls = new VRControls(view, vrHeadSet);
         }
 
-        // TODO Fix asynchronization between xr and MainLoop render loops.
-        // (see MainLoop#scheduleViewUpdate).
-        xr.setAnimationLoop((timestamp) => {
+        view.addFrameRequester(MAIN_LOOP_EVENTS.UPDATE_START, () => {
             if (xr.isPresenting && xr.getCamera().cameras.length > 0) {
                 // TODO should be called only once, but the first values are wrong because the camL&camR weren't updated
                 updateCamera3D();
@@ -63,7 +62,6 @@ const initializeWebXR = (view, options) => {
                     options.callback();
                 }
             }
-            view.mainLoop.step(view, timestamp);
         });
     });
 
