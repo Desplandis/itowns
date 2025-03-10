@@ -2,17 +2,17 @@ import * as THREE from 'three';
 import { Extent, Coordinates } from '@itowns/geographic';
 import StyleOptions from 'Core/StyleOptions';
 
-function defaultExtent(crs) {
+function defaultExtent(crs: string) {
     return new Extent(crs, Infinity, -Infinity, Infinity, -Infinity);
 }
 
-function _extendBuffer(feature, size) {
+function _extendBuffer(feature: Feature, size: number) {
     feature.vertices.length += size * feature.size;
     if (feature.normals) {
         feature.normals.length = feature.vertices.length;
     }
 }
-function _setGeometryValues(feature, coord) {
+function _setGeometryValues(feature: Feature, coord: Coordinates) {
     if (feature.normals) {
         coord.geodesicNormal.toArray(feature.normals, feature._pos);
     }
@@ -26,7 +26,21 @@ export const FEATURE_TYPES = {
     POINT: 0,
     LINE: 1,
     POLYGON: 2,
-};
+} as const;
+
+export interface FeatureCollectionOptions {
+    accurate?: boolean | undefined;
+    crs: string;
+    source: { crs: string };
+    mergeFeatures?: boolean | undefined;
+    structure?: '2d' | '3d' | undefined;
+    filterExtent: boolean;
+    style: unknown;
+    buildExtent?: boolean | undefined;
+    forcedExtentCrs?: string | undefined;
+}
+
+export type FeatureType = typeof FEATURE_TYPES[keyof typeof FEATURE_TYPES];
 
 /**
  * @typedef {Object} FeatureBuildingOptions
@@ -59,11 +73,16 @@ export const FEATURE_TYPES = {
  * anything specified in the GeoJSON under the `properties` property.
  */
 export class FeatureGeometry {
-    #currentExtent;
+    indices: { offset: number, count: number, extent?: Extent | undefined }[];
+    properties: Record<string, unknown>;
+    size: 2 | 3;
+    extent?: Extent | undefined;
+    #currentExtent?: Extent | undefined;
+
     /**
      * @param {Feature} feature geometry
      */
-    constructor(feature) {
+    constructor(feature: Feature) {
         this.indices = [];
         this.properties = {};
         this.size = feature.size;
@@ -79,7 +98,7 @@ export class FeatureGeometry {
      * @param {number} count - count of vertices
      * @param {Feature} feature - the feature containing the geometry
      */
-    startSubGeometry(count, feature) {
+    startSubGeometry(count: number, feature: Feature) {
         const last = this.indices.length - 1;
         const extent = this.extent ? defaultExtent(this.extent.crs) : undefined;
         const offset = last > -1 ?
@@ -97,13 +116,13 @@ export class FeatureGeometry {
      * @param {number} count count of vertices
      * @param {Feature} feature - the feature containing the geometry
      */
-    closeSubGeometry(count, feature) {
+    closeSubGeometry(count: number, feature: Feature) {
         const last = this.indices.length - 1;
         const offset = last > -1 ?
             this.indices[last].offset + this.indices[last].count :
             feature.vertices.length / this.size - count;
         this.indices.push({ offset, count, extent: this.#currentExtent });
-        if (this.extent) {
+        if (this.extent && this.#currentExtent) {
             this.extent.union(this.#currentExtent);
             this.#currentExtent = defaultExtent(this.extent.crs);
         }
@@ -119,13 +138,7 @@ export class FeatureGeometry {
      * @param {Feature} feature - the feature containing the geometry
      * @param {Coordinates} coordIn The coordinates to push.
      */
-    pushCoordinates(feature, coordIn) {
-        if (feature.isCoordinates) {
-            console.warn('Deprecated: change in arguments order, use pushCoordinates(feature, coordIn) instead');
-            this.pushCoordinates(coordIn, feature);
-            return;
-        }
-
+    pushCoordinates(feature: Feature, coordIn: Coordinates) {
         coordIn.as(feature.crs, coordOut);
         feature.transformToLocalSystem(coordOut);
 
@@ -149,13 +162,7 @@ export class FeatureGeometry {
      * @param {Coordinates} [coordProj] An optional argument containing the geodesic coordinates in EPSG:4326
      * It allows the user to get access to the feature coordinates to set style.base_altitude.
     */
-    pushCoordinatesValues(feature, coordIn, coordProj, ...args) {
-        if (args.length > 0) {
-            console.warn('Deprecated: change in arguments, use pushCoordinatesValues(feature, {x: long, y: lat, normal}, coordProj) instead');
-            this.pushCoordinatesValues(feature, { x: coordIn, y: coordProj, normal: args[0] }, args[1]);
-            return;
-        }
-
+    pushCoordinatesValues(feature: Feature, coordIn: Coordinates) {
         _setGeometryValues(feature, coordIn);
 
         // expand extent if present
@@ -170,19 +177,19 @@ export class FeatureGeometry {
     updateExtent() {
         if (this.extent) {
             const last = this.indices[this.indices.length - 1];
-            if (last) {
+            if (last?.extent) {
                 this.extent.union(last.extent);
             }
         }
     }
 }
 
-function push2DValues(value0, value1) {
+function push2DValues(this: Feature, value0: number, value1: number) {
     this.vertices[this._pos++] = value0;
     this.vertices[this._pos++] = value1;
 }
 
-function push3DValues(value0, value1, value2 = 0) {
+function push3DValues(this:Feature, value0: number, value1: number, value2 = 0) {
     this.vertices[this._pos++] = value0;
     this.vertices[this._pos++] = value1;
     this.vertices[this._pos++] = value2;
@@ -222,13 +229,30 @@ function push3DValues(value0, value1, value2 = 0) {
  * composing the feature.
  */
 class Feature {
+    type: FeatureType;
+    crs: string;
+    id?: string | number | undefined;
+
+    geometries: FeatureGeometry[];
+    vertices: number[];
+    size: 2 | 3;
+    normals: number[] | undefined;
+    hasRawElevationData: boolean;
+    transformToLocalSystem: (this: this, c: Coordinates) => Coordinates;
+    extent?: Extent | undefined;
+    useCrsOut?: boolean | undefined;
+
+    _pos: number;
+    _pushValues: (this: this, value0: number, value1: number, value2?: number) => void;
+    style: unknown;
+
     /**
      *
      * @param {string} type type of Feature. It can be 'point', 'line' or 'polygon'.
      * @param {FeatureCollection} collection Parent feature collection.
      */
-    constructor(type, collection) {
-        if (Object.keys(FEATURE_TYPES).find(t => FEATURE_TYPES[t] === type)) {
+    constructor(type: FeatureType, collection: FeatureCollection) {
+        if(Object.values(FEATURE_TYPES).includes(type)) {
             this.type = type;
         } else {
             throw new Error(`Unsupported Feature type: ${type}`);
@@ -264,8 +288,8 @@ class Feature {
      * Update {@link Extent} feature with {@link Extent} geometry
      * @param {FeatureGeometry} geometry used to update Feature {@link Extent}
      */
-    updateExtent(geometry) {
-        if (this.extent) {
+    updateExtent(geometry: FeatureGeometry) {
+        if (this.extent && geometry.extent) {
             this.extent.union(geometry.extent);
         }
     }
@@ -282,12 +306,14 @@ export default Feature;
 
 const doNothing = () => {};
 
-const transformToLocalSystem3D = (coord, collection) => {
+const transformToLocalSystem3D = (coord: Coordinates, collection: FeatureCollection) => {
     coord.geodesicNormal.applyNormalMatrix(collection.normalMatrixInverse);
     return coord.applyMatrix4(collection.matrixWorldInverse);
 };
 
-const transformToLocalSystem2D = (coord, collection) => coord.applyMatrix4(collection.matrixWorldInverse);
+const transformToLocalSystem2D = (coord: Coordinates, collection: FeatureCollection) =>
+    coord.applyMatrix4(collection.matrixWorldInverse);
+
 const axisZ = new THREE.Vector3(0, 0, 1);
 const alignYtoEast = new THREE.Quaternion();
 /**
@@ -337,12 +363,26 @@ const alignYtoEast = new THREE.Quaternion();
  */
 
 export class FeatureCollection extends THREE.Object3D {
+    readonly isFeatureCollection: true;
+
+    crs: string;
+    features: Feature[];
+    mergeFeatures: boolean;
+    size: 2 | 3;
+    filterExtent: boolean;
+    style: unknown;
+    isInverted: boolean;
+    matrixWorldInverse: THREE.Matrix4;
+    normalMatrixInverse: THREE.Matrix3;
+    center: Coordinates;
+    extent?: Extent | undefined;
+
     #transformToLocalSystem = transformToLocalSystem2D;
-    #setLocalSystem = doNothing;
+    #setLocalSystem: (c: Coordinates) => void = doNothing;
     /**
      * @param      {FeatureBuildingOptions|Layer}  options  The building options .
      */
-    constructor(options) {
+    constructor(options: FeatureCollectionOptions) {
         super();
         this.isFeatureCollection = true;
         this.crs = options.accurate || !options.source?.crs ? options.crs : options.source.crs;
@@ -353,22 +393,23 @@ export class FeatureCollection extends THREE.Object3D {
         this.style = options.style;
         this.isInverted = false;
         this.matrixWorldInverse = new THREE.Matrix4();
+        this.normalMatrixInverse = new THREE.Matrix3();
         this.center = new Coordinates('EPSG:4326', 0, 0);
 
         if (this.size == 2) {
             this.extent = options.buildExtent === false ? undefined : defaultExtent(options.forcedExtentCrs || this.crs);
-            this.#setLocalSystem = (center) => {
+            this.#setLocalSystem = (center: Coordinates) => {
                 // set local system center
                 center.as(this.crs, this.center);
 
                 // set position to local system center
                 this.position.copy(center);
-                this.updateMatrixWorld();
+                this.updateMatrixWorld(false);
                 this.#setLocalSystem = doNothing;
             };
         } else {
             this.extent = options.buildExtent ? defaultExtent(options.forcedExtentCrs || this.crs) : undefined;
-            this.#setLocalSystem = (center) => {
+            this.#setLocalSystem = (center: Coordinates) => {
                 // set local system center
                 center.as('EPSG:4326', this.center);
 
@@ -382,9 +423,9 @@ export class FeatureCollection extends THREE.Object3D {
 
                 // set position to local system center
                 this.position.copy(center);
-                this.updateMatrixWorld();
+                this.updateMatrixWorld(false);
                 this.normalMatrix.getNormalMatrix(this.matrix);
-                this.normalMatrixInverse = new THREE.Matrix3().copy(this.normalMatrix).invert();
+                this.normalMatrixInverse.copy(this.normalMatrix).invert();
 
                 this.#setLocalSystem = doNothing;
             };
@@ -400,7 +441,7 @@ export class FeatureCollection extends THREE.Object3D {
      * @param   {Coordinates}  coordinates  The coordinates
      * @returns {Coordinates} The coordinates in local system
      */
-    transformToLocalSystem(coordinates) {
+    transformToLocalSystem(coordinates: Coordinates) {
         this.#setLocalSystem(coordinates);
         return this.#transformToLocalSystem(coordinates, this);
     }
@@ -410,11 +451,13 @@ export class FeatureCollection extends THREE.Object3D {
      * `extent` is `undefined`.
      * @param {Extent} extent
      */
-    updateExtent(extent) {
+    updateExtent(extent: Extent) {
         if (this.extent) {
             const extents = extent ? [extent] : this.features.map(feature => feature.extent);
             for (const ext of extents) {
-                this.extent.union(ext);
+                if (ext) {
+                    this.extent.union(ext);
+                }
             }
         }
     }
@@ -424,7 +467,7 @@ export class FeatureCollection extends THREE.Object3D {
      *
      * @param {boolean}  force   The force
      */
-    updateMatrixWorld(force) {
+    updateMatrixWorld(force: boolean) {
         super.updateMatrixWorld(force);
         this.matrixWorldInverse.copy(this.matrixWorld).invert();
     }
@@ -440,12 +483,14 @@ export class FeatureCollection extends THREE.Object3D {
      * Push the `feature` in FeatureCollection.
      * @param {Feature} feature
      */
-    pushFeature(feature) {
+    pushFeature(feature: Feature) {
         this.features.push(feature);
-        this.updateExtent(feature.extent);
+        if (feature.extent) {
+            this.updateExtent(feature.extent);
+        }
     }
 
-    requestFeature(type, callback) {
+    requestFeature(type: FeatureType, callback: (feat: Feature) => boolean) {
         const feature = this.features.find(callback);
         if (feature && this.mergeFeatures) {
             return feature;
@@ -463,7 +508,7 @@ export class FeatureCollection extends THREE.Object3D {
      * @param {string} type the type requested
      * @returns {Feature}
      */
-    requestFeatureByType(type) {
+    requestFeatureByType(type: FeatureType) {
         return this.requestFeature(type, feature => feature.type === type);
     }
 
@@ -475,7 +520,7 @@ export class FeatureCollection extends THREE.Object3D {
      * @param {string} type the type requested
      * @returns {Feature}
      */
-    requestFeatureById(id, type) {
+    requestFeatureById(id: number | string, type: FeatureType) {
         return this.requestFeature(type, feature => feature.id === id);
     }
     /**
@@ -485,7 +530,7 @@ export class FeatureCollection extends THREE.Object3D {
      * @param      {Feature}   feature  The feature to reference.
      * @return     {Feature}  The new referenced feature
      */
-    newFeatureByReference(feature) {
+    newFeatureByReference(feature: Feature) {
         const ref = new Feature(feature.type, this);
         ref.extent = feature.extent;
         ref.geometries = feature.geometries;
