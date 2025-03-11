@@ -1,22 +1,26 @@
 import { TextureLoader, DataTexture, RedFormat, FloatType } from 'three';
+import type { Texture } from 'three';
 
 const TEXTURE_TILE_DIM = 256;
 const TEXTURE_TILE_SIZE = TEXTURE_TILE_DIM * TEXTURE_TILE_DIM;
 
 const textureLoader = new TextureLoader();
 
-function checkResponse(response) {
+export type Fetcher<T> = (url: string, options?: RequestInit) => T;
+
+function checkResponse(response: Response) {
     if (!response.ok) {
         const error = new Error(`Error loading ${response.url}: status ${response.status}`);
-        error.response = response;
+        error.cause = response;
         throw error;
     }
 }
 
-const arrayBuffer = (url, options = {}) => fetch(url, options).then((response) => {
-    checkResponse(response);
-    return response.arrayBuffer();
-});
+const arrayBuffer = (url: string, options: RequestInit = {}) =>
+    fetch(url, options).then((response) => {
+        checkResponse(response);
+        return response.arrayBuffer();
+    });
 
 /**
  * Utilitary to fetch resources from a server using the [fetch API](
@@ -35,7 +39,7 @@ export default {
      *
      * @return {Promise<string>} Promise containing the text.
      */
-    text(url, options = {}) {
+    text(url: string, options: RequestInit = {}): Promise<string> {
         return fetch(url, options).then((response) => {
             checkResponse(response);
             return response.text();
@@ -52,7 +56,7 @@ export default {
      *
      * @return {Promise<Object>} Promise containing the JSON object.
      */
-    json(url, options = {}) {
+    json(url: string, options: RequestInit = {}): Promise<unknown> {
         return fetch(url, options).then((response) => {
             checkResponse(response);
             return response.json();
@@ -69,7 +73,7 @@ export default {
      *
      * @return {Promise<Document>} Promise containing the XML Document.
      */
-    xml(url, options = {}) {
+    xml(url: string, options: RequestInit = {}): Promise<XMLDocument> {
         return fetch(url, options).then((response) => {
             checkResponse(response);
             return response.text();
@@ -89,22 +93,19 @@ export default {
      * @return {Promise<THREE.Texture>} Promise containing the
      * [THREE.Texture](https://threejs.org/docs/api/en/textures/Texture.html).
      */
-    texture(url, options = {}) {
-        let res;
-        let rej;
+    texture(url: string, options: RequestInit & { crossOrigin?: string } = {}): Promise<Texture> {
+        if (options.crossOrigin) {
+            textureLoader.crossOrigin = options.crossOrigin;
+        }
 
-        textureLoader.crossOrigin = options.crossOrigin;
-
-        const promise = new Promise((resolve, reject) => {
-            res = resolve;
-            rej = reject;
+        const promise = new Promise((resolve: (data: Texture) => void, reject) => {
+            textureLoader.load(url, resolve, () => {}, (event) => {
+                const error = new Error(`Failed to load texture from URL: \`${url}\``);
+                error.cause = event;
+                reject(error);
+            });
         });
 
-        textureLoader.load(url, res, () => {}, (event) => {
-            const error = new Error(`Failed to load texture from URL: \`${url}\``);
-            error.originalEvent = event;
-            rej(error);
-        });
         return promise;
     },
 
@@ -131,7 +132,7 @@ export default {
      *
      * @return {Promise<THREE.DataTexture>} Promise containing the DataTexture.
      */
-    textureFloat(url, options = {}) {
+    textureFloat(url: string, options: RequestInit = {}): Promise<DataTexture> {
         return arrayBuffer(url, options).then((buffer) => {
             if (buffer.byteLength !== TEXTURE_TILE_SIZE * Float32Array.BYTES_PER_ELEMENT) {
                 throw new Error(`Invalid float data from URL: \`${url}\``);
@@ -179,16 +180,18 @@ export default {
      *     };
      * });
      */
-    multiple(baseUrl, extensions, options = {}) {
+    multiple(baseUrl: string, extensions: Record<string, string>, options = {}) {
         const promises = [];
         let url;
 
         for (const fetchType in extensions) {
+            // @ts-ignore
             if (!this[fetchType]) {
                 throw new Error(`${fetchType} is not a valid Fetcher method.`);
             } else {
                 for (const extension of extensions[fetchType]) {
                     url = `${baseUrl}.${extension}`;
+                    // @ts-ignore
                     promises.push(this[fetchType](url, options).then(result => ({
                         type: extension,
                         result,
@@ -200,6 +203,7 @@ export default {
         return Promise.all(promises).then((result) => {
             const all = {};
             for (const res of result) {
+                // @ts-ignore
                 all[res.type] = res.result;
             }
 
@@ -207,7 +211,7 @@ export default {
         });
     },
 
-    get(format = '') {
+    get(format = ''): Fetcher<unknown> {
         const [type, subtype] = format.split('/');
         switch (type) {
             case 'application':
