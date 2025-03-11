@@ -1,27 +1,18 @@
 import { TextureLoader, DataTexture, RedFormat, FloatType } from 'three';
-import type { Texture } from 'three';
-
 const TEXTURE_TILE_DIM = 256;
 const TEXTURE_TILE_SIZE = TEXTURE_TILE_DIM * TEXTURE_TILE_DIM;
-
 const textureLoader = new TextureLoader();
-
-export type Fetcher<T> = (url: string, options?: RequestInit) => T;
-
-function checkResponse(response: Response) {
+function checkResponse(response) {
     if (!response.ok) {
         const error = new Error(`Error loading ${response.url}: status ${response.status}`);
         error.cause = response;
         throw error;
     }
 }
-
-const arrayBuffer = (url: string, options: RequestInit = {}) =>
-    fetch(url, options).then((response) => {
-        checkResponse(response);
-        return response.arrayBuffer();
-    });
-
+const arrayBuffer = (url, options = {}) => fetch(url, options).then((response) => {
+    checkResponse(response);
+    return response.arrayBuffer();
+});
 /**
  * Utilitary to fetch resources from a server using the [fetch API](
  * https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch).
@@ -38,13 +29,12 @@ export default {
      *
      * @returns A promise that resolves to a string.
      */
-    text(url: string, options: RequestInit = {}): Promise<string> {
+    text(url, options = {}) {
         return fetch(url, options).then((response) => {
             checkResponse(response);
             return response.text();
         });
     },
-
     /**
      * A fetch wrapper thet returns the response as a JSON object.
      *
@@ -55,13 +45,12 @@ export default {
      *
      * @returns A promise that resolves to a JSON object.
      */
-    json(url: string, options: RequestInit = {}): Promise<unknown> {
+    json(url, options = {}) {
         return fetch(url, options).then((response) => {
             checkResponse(response);
             return response.json();
         });
     },
-
     /**
      * A fetch wrapper that returns the response as an XML document.
      *
@@ -72,13 +61,12 @@ export default {
      *
      * @returns A promise that resolves to an XML Document.
      */
-    xml(url: string, options: RequestInit = {}): Promise<XMLDocument> {
+    xml(url, options = {}) {
         return fetch(url, options).then((response) => {
             checkResponse(response);
             return response.text();
         }).then(text => new window.DOMParser().parseFromString(text, 'text/xml'));
     },
-
     /**
      * A wrapper around [THREE.TextureLoader](https://threejs.org/docs/#api/en/loaders/TextureLoader).
      *
@@ -92,22 +80,19 @@ export default {
      * @returns A promise that resolves to a
      * [THREE.Texture](https://threejs.org/docs/api/en/textures/Texture.html).
      */
-    texture(url: string, options: RequestInit & { crossOrigin?: string } = {}): Promise<Texture> {
+    texture(url, options = {}) {
         if (options.crossOrigin) {
             textureLoader.crossOrigin = options.crossOrigin;
         }
-
-        const promise = new Promise((resolve: (data: Texture) => void, reject) => {
-            textureLoader.load(url, resolve, () => {}, (event) => {
+        const promise = new Promise((resolve, reject) => {
+            textureLoader.load(url, resolve, () => { }, (event) => {
                 const error = new Error(`Failed to load texture from URL: \`${url}\``);
                 error.cause = event;
                 reject(error);
             });
         });
-
         return promise;
     },
-
     /**
      * A fetch wrapper that returns the response as an array buffer.
      *
@@ -120,7 +105,6 @@ export default {
      * @returns A promise that resolves to an array buffer.
      */
     arrayBuffer,
-
     /**
      * A fetch wrapper that returns the response as a
      * [THREE.DataTexture](https://threejs.org/docs/#api/en/textures/DataTexture).
@@ -132,22 +116,18 @@ export default {
      *
      * @returns A promise that resolves to a DataTexture.
      */
-    textureFloat(url: string, options: RequestInit = {}): Promise<DataTexture> {
+    textureFloat(url, options = {}) {
         return arrayBuffer(url, options).then((buffer) => {
             if (buffer.byteLength !== TEXTURE_TILE_SIZE * Float32Array.BYTES_PER_ELEMENT) {
                 throw new Error(`Invalid float data from URL: \`${url}\``);
             }
             const data = new Float32Array(buffer);
-            const texture = new DataTexture(data,
-                TEXTURE_TILE_DIM, TEXTURE_TILE_DIM,
-                RedFormat, FloatType,
-            );
+            const texture = new DataTexture(data, TEXTURE_TILE_DIM, TEXTURE_TILE_DIM, RedFormat, FloatType);
             texture.internalFormat = 'R32F';
             texture.needsUpdate = true;
             return texture;
         });
     },
-
     /**
      * Wrapper over fetch to get a bunch of files sharing the same name, but
      * different extensions.
@@ -185,18 +165,16 @@ export default {
      * });
      * ```
      */
-    multiple(baseUrl: string, extensions: Record<string, string>, options = {}) {
+    multiple(baseUrl, extensions, options = {}) {
         const promises = [];
         let url;
-
         for (const fetchType in extensions) {
-            // @ts-ignore
             if (!this[fetchType]) {
                 throw new Error(`${fetchType} is not a valid Fetcher method.`);
-            } else {
+            }
+            else {
                 for (const extension of extensions[fetchType]) {
                     url = `${baseUrl}.${extension}`;
-                    // @ts-ignore
                     promises.push(this[fetchType](url, options).then(result => ({
                         type: extension,
                         result,
@@ -204,19 +182,15 @@ export default {
                 }
             }
         }
-
         return Promise.all(promises).then((result) => {
             const all = {};
             for (const res of result) {
-                // @ts-ignore
                 all[res.type] = res.result;
             }
-
             return Promise.resolve(all);
         });
     },
-
-    get(format = ''): Fetcher<unknown> {
+    get(format = '') {
         const [type, subtype] = format.split('/');
         switch (type) {
             case 'application':
