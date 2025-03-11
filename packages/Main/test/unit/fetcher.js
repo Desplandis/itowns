@@ -32,7 +32,8 @@ describe('Fetcher', function () {
                     res = err;
                 })
                 .finally(() => {
-                    if (res.response?.status === 404) {
+                    const response = res.cause;
+                    if (response?.status === 404) {
                         done();
                     } else {
                         done(new Error('response.status !== 404'));
@@ -102,7 +103,7 @@ describe('Fetcher', function () {
         'LAYER=ELEVATION.ELEVATIONGRIDCOVERAGE.SRTM3&FORMAT=image/x-bil;bits=32' +
         '&SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&STYLE=normal&' +
         'TILEMATRIXSET=WGS84G&TILEMATRIX=3&TILEROW=2&TILECOL=8';
-        xit('should get a WebGl2 texture float', (done) => {
+        it('should get a WebGl2 texture float', (done) => {
             Fetcher.textureFloat(url, networkOptions)
                 .then((texture) => {
                     assert.ok(texture instanceof DataTexture);

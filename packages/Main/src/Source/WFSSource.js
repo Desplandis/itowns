@@ -146,8 +146,9 @@ class WFSSource extends Source {
     }
 
     handlingError(err) {
-        if (err.response && err.response.status == 400) {
-            return err.response.text().then((text) => {
+        const response = err.cause;
+        if (response && response.status == 400) {
+            return response.text().then((text) => {
                 const getCapUrl = `${this.url}SERVICE=WFS&REQUEST=GetCapabilities&VERSION=${this.version}`;
                 const xml = new DOMParser().parseFromString(text, 'application/xml');
                 const errorElem = xml.querySelector('Exception');
