@@ -1,11 +1,99 @@
 import * as THREE from 'three';
-import { FEATURE_TYPES } from 'Core/Feature';
+import { FEATURE_TYPES, FeatureCollection } from 'Core/Feature';
 import { Extent, Coordinates } from '@itowns/geographic';
-import Style, { StyleContext } from 'Core/Style';
+import Style, { StyleContext, cropImage } from 'Core/Style';
 
-const defaultStyle = new Style();
+import type { Style as StyleInterface } from 'Core/StyleOptions';
+
+import type Feature from 'Core/Feature';
+
+const defaultStyle: StyleInterface = new Style();
 const context = new StyleContext();
-let style;
+
+const canvas = document.createElement('canvas');
+const matrix = document.createElementNS('http://www.w3.org/2000/svg', 'svg').createSVGMatrix();
+
+function _applyStrokeToPolygon(
+    txtrCtx: CanvasRenderingContext2D,
+    style: StyleInterface,
+    invCtxScale: number,
+    polygon: Path2D,
+) {
+    if (txtrCtx.strokeStyle !== style.stroke.color) {
+        txtrCtx.strokeStyle = style.stroke.color;
+    }
+    const width = style.stroke.width * invCtxScale;
+    if (txtrCtx.lineWidth !== width) {
+        txtrCtx.lineWidth = width;
+    }
+    const alpha = style.stroke.opacity;
+    if (alpha !== txtrCtx.globalAlpha && typeof alpha == 'number') {
+        txtrCtx.globalAlpha = alpha;
+    }
+    if (txtrCtx.lineCap !== style.stroke.lineCap) {
+        txtrCtx.lineCap = style.stroke.lineCap;
+    }
+    txtrCtx.setLineDash(style.stroke.dasharray.map(a => a * invCtxScale * 2));
+    txtrCtx.stroke(polygon);
+}
+
+async function _applyFillToPolygon(
+    txtrCtx: CanvasRenderingContext2D,
+    style: StyleInterface,
+    invCtxScale: number,
+    polygon: Path2D,
+) {
+    // if (this.fill.pattern && txtrCtx.fillStyle.src !== this.fill.pattern.src) {
+    // need doc for the txtrCtx.fillStyle.src that seems to always be undefined
+    if (style.fill.pattern) {
+        let img = style.fill.pattern;
+        const cropValues = { ...style.fill.pattern.cropValues };
+        if (style.fill.pattern.source) {
+            img = await loadImage(style.fill.pattern.source);
+        }
+        cropImage(img, cropValues);
+
+        txtrCtx.fillStyle = txtrCtx.createPattern(canvas, 'repeat');
+        if (txtrCtx.fillStyle.setTransform) {
+            txtrCtx.fillStyle.setTransform(matrix.scale(invCtxScale));
+        } else {
+            console.warn('Raster pattern isn\'t completely supported on Ie and edge', txtrCtx.fillStyle);
+        }
+    } else if (txtrCtx.fillStyle !== style.fill.color) {
+        txtrCtx.fillStyle = style.fill.color;
+    }
+    if (style.fill.opacity !== txtrCtx.globalAlpha) {
+        txtrCtx.globalAlpha = style.fill.opacity;
+    }
+    txtrCtx.fill(polygon);
+}
+
+    /**
+     * Applies the style.fill to a polygon of the texture canvas.
+     * @param {CanvasRenderingContext2D} txtrCtx The Context 2D of the texture canvas.
+     * @param {Path2D} polygon The current texture canvas polygon.
+     * @param {Number} invCtxScale The ratio to scale line width and radius circle.
+     * @param {Boolean} canBeFilled - true if feature.type == FEATURE_TYPES.POLYGON.
+     */
+function applyToCanvasPolygon(
+    ctx: CanvasRenderingContext2D,
+    style: StyleInterface,
+    polygon: Path2D,
+    invCtxScale: number,
+    canBeFilled: boolean,
+) {
+    // draw line or edge of polygon
+    if (style.stroke.width > 0) {
+        // TO DO add possibility of using a pattern (https://github.com/iTowns/itowns/issues/2210)
+        _applyStrokeToPolygon(ctx, style, invCtxScale, polygon);
+    }
+
+    // fill inside of polygon
+    if (canBeFilled && (style.fill.pattern || style.fill.color)) {
+        // canBeFilled can be move to StyleContext in the later PR
+        _applyFillToPolygon(ctx, style, invCtxScale, polygon);
+    }
+}
 
 /**
  * Draw polygon (contour, line edge and fill) based on feature vertices into canvas
@@ -21,7 +109,16 @@ let style;
  * @param      {Number} invCtxScale - The ration to scale line width and radius circle.
  * @param      {Boolean} canBeFilled - true if feature.type == FEATURE_TYPES.POLYGON
  */
-function drawPolygon(ctx, vertices, indices = [{ offset: 0, count: 1 }], size, extent, invCtxScale, canBeFilled) {
+function drawPolygon(
+    ctx: CanvasRenderingContext2D,
+    vertices: number[],
+    indices: { offset: number, count: number, extent?: Extent }[] = [{ offset: 0, count: 1 }],
+    size: number,
+    extent: Extent,
+    invCtxScale: number,
+    canBeFilled: boolean,
+    style: StyleInterface,
+) {
     if (vertices.length === 0) {
         return;
     }
@@ -38,23 +135,31 @@ function drawPolygon(ctx, vertices, indices = [{ offset: 0, count: 1 }], size, e
             }
         }
     }
-    style.applyToCanvasPolygon(ctx, path, invCtxScale, canBeFilled);
+    applyToCanvasPolygon(ctx, style, path, invCtxScale, canBeFilled);
 }
 
-function drawPoint(ctx, x, y, invCtxScale) {
+function drawPoint(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    invCtxScale: number,
+    style: StyleInterface,
+) {
     ctx.beginPath();
-    const opacity = style.point.opacity == undefined ? 1.0 : style.point.opacity;
+    const opacity = style?.point?.opacity ?? 1.0;
     if (opacity !== ctx.globalAlpha) {
         ctx.globalAlpha = opacity;
     }
 
-    ctx.arc(x, y, (style.point.radius || 3.0) * invCtxScale, 0, 2 * Math.PI, false);
-    if (style.point.color) {
-        ctx.fillStyle = style.point.color;
+    const radius = style?.point?.radius ?? 3.0;
+    ctx.arc(x, y, radius * invCtxScale, 0, 2 * Math.PI, false);
+    if (style?.point?.color) {
+        ctx.fillStyle = style.point.color; // TODO[QB]: THREE.ColorRepresentation to string
         ctx.fill();
     }
-    if (style.point.line) {
-        ctx.lineWidth = (style.point.width || 1.0) * invCtxScale;
+    if (style?.point?.line) {
+        const width = style?.point?.width ?? 1.0;
+        ctx.lineWidth = width * invCtxScale;
         ctx.strokeStyle = style.point.line;
         ctx.stroke();
     }
@@ -62,15 +167,21 @@ function drawPoint(ctx, x, y, invCtxScale) {
 
 const coord = new Coordinates('EPSG:4326', 0, 0, 0);
 
-function drawFeature(ctx, feature, extent, invCtxScale) {
+function drawFeature(
+    ctx: CanvasRenderingContext2D,
+    feature: Feature,
+    extent: Extent,
+    invCtxScale: number,
+    style: StyleInterface,
+) {
     const extentDim = extent.planarDimensions();
     const scaleRadius = extentDim.x / ctx.canvas.width;
 
     for (const geometry of feature.geometries) {
-        if (Extent.intersectsExtent(geometry.extent, extent)) {
+        if (geometry.extent && Extent.intersectsExtent(geometry.extent, extent)) {
             context.setGeometry(geometry);
             if (style.zoom.min > style.context.zoom || style.zoom.max <= style.context.zoom) {
-                return;
+                return; // TODO
             }
 
             if (
@@ -85,12 +196,12 @@ function drawFeature(ctx, feature, extent, invCtxScale) {
                     for (let j = offset; j < count; j += feature.size) {
                         coord.setFromArray(feature.vertices, j);
                         if (extent.isPointInside(coord, px)) {
-                            drawPoint(ctx, feature.vertices[j], feature.vertices[j + 1], invCtxScale);
+                            drawPoint(ctx, feature.vertices[j], feature.vertices[j + 1], invCtxScale, style);
                         }
                     }
                 }
             } else {
-                drawPolygon(ctx, feature.vertices, geometry.indices, feature.size, extent, invCtxScale, (feature.type == FEATURE_TYPES.POLYGON));
+                drawPolygon(ctx, feature.vertices, geometry.indices, feature.size, extent, invCtxScale, (feature.type == FEATURE_TYPES.POLYGON), style);
             }
         }
     }
@@ -109,8 +220,8 @@ const featureExtent = new Extent('EPSG:4326', 0, 0, 0, 0);
 export default {
     // backgroundColor is a THREE.Color to specify a color to fill the texture
     // with, given there is no feature passed in parameter
-    createTextureFromFeature(collection, extent, sizeTexture, layerStyle, backgroundColor) {
-        style = layerStyle || defaultStyle;
+    createTextureFromFeature(collection: FeatureCollection, extent: Extent, sizeTexture: number, layerStyle?: Style, backgroundColor?: THREE.Color) {
+        const style = layerStyle || defaultStyle;
         style.setContext(context);
         let texture;
 
@@ -124,14 +235,14 @@ export default {
 
             c.width = sizeTexture;
             c.height = sizeTexture;
-            const ctx = c.getContext('2d', { willReadFrequently: true });
+            const ctx = c.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
             if (backgroundColor) {
                 ctx.fillStyle = backgroundColor.getStyle();
                 ctx.fillRect(0, 0, sizeTexture, sizeTexture);
             }
 
             // Documentation needed !!
-            ctx.globalCompositeOperation = layerStyle.globalCompositeOperation || 'source-over';
+            ctx.globalCompositeOperation = 'source-over';
             ctx.imageSmoothingEnabled = false;
             ctx.lineJoin = 'round';
 
@@ -160,12 +271,10 @@ export default {
             // to scale line width and radius circle
             const invCtxScale = Math.abs(1 / scale.x);
 
-            context.setZoom(extent.zoom);
-
             // Draw the canvas
             for (const feature of collection.features) {
                 context.setFeature(feature);
-                drawFeature(ctx, feature, featureExtent, invCtxScale);
+                drawFeature(ctx, feature, featureExtent, invCtxScale, style);
             }
 
             texture = new THREE.CanvasTexture(c);

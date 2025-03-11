@@ -2,25 +2,43 @@ import * as THREE from 'three';
 import Feature2Texture from 'Converter/Feature2Texture';
 import { Extent } from '@itowns/geographic';
 
+import type { FeatureCollection } from 'Core/Feature';
+import Tile from 'Core/Tile/Tile';
+
+interface Layer {
+    crs: string;
+    subdivisionThreshold: number;
+    source: { backgroundLayer?: THREE.Color };
+    magFilter: THREE.MagnificationTextureFilter;
+    minFilter: THREE.MinificationTextureFilter;
+    transparent: boolean;
+    backgroundLayer: {
+        paint: any, // TODO[QB]
+    }
+}
+
 const extentTexture = new Extent('EPSG:4326');
 
-const textureLayer = (texture, layer) => {
+const textureLayer = (texture: THREE.Texture, layer: Layer) => { // TODO[QB]
     texture.generateMipmaps = false;
     texture.magFilter = layer.magFilter || THREE.LinearFilter;
     texture.minFilter = layer.minFilter || THREE.LinearFilter;
     return texture;
 };
 
-function textureColorLayer(texture, layer) {
+function textureColorLayer(texture: THREE.Texture, layer: Layer) { // TODO[QB]
     texture.anisotropy = 16;
     texture.premultiplyAlpha = layer.transparent;
     return textureLayer(texture, layer);
 }
 
 export default {
-    convert(data, destinationTile, layer) {
+    // TODO[QB]: Why not split convert into two functions:
+    // - convertToColor which takes textures and featurecollections
+    // - convertToElevation which takes textures
+    convert(data: THREE.Texture | FeatureCollection, destinationTile: Tile, layer: Layer) {
         let texture;
-        if (data.isFeatureCollection) {
+        if ('isFeatureCollection' in data) {
             const backgroundLayer = layer.source.backgroundLayer;
             const backgroundColor = (backgroundLayer && backgroundLayer.paint) ?
                 new THREE.Color(backgroundLayer.paint['background-color']) :
@@ -28,6 +46,7 @@ export default {
 
             destinationTile.toExtent(layer.crs, extentTexture);
             texture = Feature2Texture.createTextureFromFeature(data, extentTexture, layer.subdivisionThreshold, layer.style, backgroundColor);
+            // TODO[QB]: use Texture#userData
             texture.features = data;
             texture.extent = destinationTile;
         } else if (data.isTexture) {
@@ -47,5 +66,7 @@ export default {
             }
             return textureLayer(texture, layer);
         }
+
+        console.log('TOTO');
     },
 };

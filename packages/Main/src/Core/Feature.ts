@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { Extent, Coordinates } from '@itowns/geographic';
 import StyleOptions from 'Core/StyleOptions';
 
+import type { Style } from 'Core/StyleOptions';
+
 function defaultExtent(crs: string) {
     return new Extent(crs, Infinity, -Infinity, Infinity, -Infinity);
 }
@@ -35,7 +37,7 @@ export interface FeatureCollectionOptions {
     mergeFeatures?: boolean | undefined;
     structure?: '2d' | '3d' | undefined;
     filterExtent: boolean;
-    style: unknown;
+    style: Style;
     buildExtent?: boolean | undefined;
     forcedExtentCrs?: string | undefined;
 }
@@ -370,7 +372,7 @@ export class FeatureCollection extends THREE.Object3D {
     mergeFeatures: boolean;
     size: 2 | 3;
     filterExtent: boolean;
-    style: unknown;
+    style: Style;
     isInverted: boolean;
     matrixWorldInverse: THREE.Matrix4;
     normalMatrixInverse: THREE.Matrix3;

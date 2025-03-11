@@ -69,6 +69,7 @@
     "@babel/preset-typescript": "^7.24.7",
     "@babel/register": "^7.24.6",
     "@stylistic/eslint-plugin": "^2.8.0",
+    "@types/earcut": "^3.0.0",
     "@types/proj4": "^2.5.5",
     "@types/three": "^0.170.0",
     "@typescript-eslint/eslint-plugin": "^8.5.0",

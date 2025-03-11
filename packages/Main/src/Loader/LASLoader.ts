@@ -15,7 +15,7 @@ import { Las } from 'copc';
  * xOffset, zOffset]`) added to the scaled X, Y, Z point record values.
  */
 
-function defaultColorEncoding(header) {
+function defaultColorEncoding(header: Las.Header): 8 | 16 {
     return (header.majorVersion === 1 && header.minorVersion <= 2) ? 8 : 16;
 }
 
@@ -29,6 +29,9 @@ function defaultColorEncoding(header) {
  * repository.
  */
 class LASLoader {
+    private _wasmPath: string;
+    private _wasmPromise: typeof LazPerf.create | null;
+
     constructor() {
         this._wasmPath = 'https://cdn.jsdelivr.net/npm/laz-perf@0.0.6/lib';
         this._wasmPromise = null;
@@ -130,7 +133,7 @@ class LASLoader {
      * Set LazPerf decoder path.
      * @param {string} path - path to `laz-perf.wasm` folder.
      */
-    set lazPerf(path) {
+    set lazPerf(path: string) {
         this._wasmPath = path;
         this._wasmPromise = null;
     }
@@ -149,7 +152,7 @@ class LASLoader {
      * Either 8 or 16 bits. Defaults to 8 bits for LAS 1.2 and 16 bits for later
      * versions (as mandatory by the specification).
      */
-    async parseChunk(data, options) {
+    async parseChunk(data: Uint8Array, options) {
         const { header, eb, pointCount } = options;
         const { pointDataRecordFormat, pointDataRecordLength } = header;
 

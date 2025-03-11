@@ -3,6 +3,14 @@ import Picking from 'Core/Picking';
 import { CACHE_POLICIES } from 'Core/Scheduler/Cache';
 import ObjectRemovalHelper from 'Process/ObjectRemovalHelper';
 
+import type * as THREE from 'three';
+import type { LayerOptions } from 'Layer/Layer';
+
+interface GeometryLayerOptions extends LayerOptions {
+    visible?: boolean;
+    opacity?: number;
+}
+
 /**
  * Fires when the opacity of the layer has changed.
  * @event GeometryLayer#opacity-property-changed
@@ -18,7 +26,19 @@ import ObjectRemovalHelper from 'Process/ObjectRemovalHelper';
  * @property {number} [zoom.min=0] - this is the minimum zoom from which it'll be visible.
  * This property is used only if the layer is attached to {@link TiledGeometryLayer}.
  */
-class GeometryLayer extends Layer {
+abstract class GeometryLayer extends Layer<unknown> {
+    readonly isGeometryLayer: true;
+
+    readonly object3d: THREE.Object3D;
+    opacity: number;
+    wireframe: boolean;
+    attachedLayers: Layer<unknown, unknown>[];
+    filteringExtent: boolean; // TODO[QB]: Move up???
+
+    // TODO[QB]: visible as getter/setter and not property???
+
+    readonly structure: '3d'; // TODO[QB]: useless?
+
     /**
      * A layer usually managing a geometry to display on a view. For example, it
      * can be a layer of buildings extruded from a a WFS stream.
@@ -54,7 +74,7 @@ class GeometryLayer extends Layer {
      * // Add the layer
      * view.addLayer(geometry);
      */
-    constructor(id, object3d, config = {}) {
+    constructor(id: string, object3d: THREE.Object3D, config: GeometryLayerOptions) {
         const {
             cacheLifeTime = CACHE_POLICIES.GEOMETRY,
             visible = true,
@@ -117,7 +137,7 @@ class GeometryLayer extends Layer {
         });
 
         // Feature options
-        this.filteringExtent = !this.source.isFileSource;
+        this.filteringExtent = !('isFileSource' in this.source);
         this.structure = '3d';
     }
 
@@ -168,7 +188,7 @@ class GeometryLayer extends Layer {
      * @param {Layer} layer - The layer to attach, that must have an `update`
      * method.
      */
-    attach(layer) {
+    attach(layer: Layer<unknown, unknown>) {
         if (!layer.update) {
             throw new Error(`Missing 'update' function -> can't attach layer
                 ${layer.id}`);
@@ -186,7 +206,7 @@ class GeometryLayer extends Layer {
      *
      * @return {boolean} Confirmation of the detachment of the layer.
      */
-    detach(layer) {
+    detach(layer: Layer<unknown, unknown>) {
         const count = this.attachedLayers.length;
         this.attachedLayers = this.attachedLayers.filter(attached => attached.id != layer.id);
         layer.parent = undefined;
@@ -197,7 +217,7 @@ class GeometryLayer extends Layer {
      * All layer's 3D objects are removed from the scene and disposed from the video device.
      * @param {boolean} [clearCache=false] Whether to clear the layer cache or not
      */
-    delete(clearCache) {
+    delete(clearCache: boolean | undefined) {
         if (clearCache) {
             this.cache.clear();
         }

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import DEMUtils from 'Utils/DEMUtils';
 import { Coordinates } from '@itowns/geographic';
+import { applyToHTML } from 'Utils/StyleDOMUtils';
 
 const coord = new Coordinates('EPSG:4326');
 let rect;
@@ -99,7 +100,7 @@ class Label extends THREE.Object3D {
                 if (style.text.haloWidth > 0) {
                     this.content.classList.add('itowns-stroke-single');
                 }
-                style.applyToHTML(this.content)
+                applyToHTML(this.content)
                     .then((icon) => {
                         if (icon) { // Not sure if that test is needed...
                             this.icon = icon;

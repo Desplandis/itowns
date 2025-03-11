@@ -5,7 +5,11 @@ const TEXTURE_TILE_SIZE = TEXTURE_TILE_DIM * TEXTURE_TILE_DIM;
 
 const textureLoader = new TextureLoader();
 
-function checkResponse(response) {
+interface RequestInit {
+    crossOrigin?: string;
+}
+
+function checkResponse(response: Response) {
     if (!response.ok) {
         const error = new Error(`Error loading ${response.url}: status ${response.status}`);
         error.response = response;
@@ -13,7 +17,7 @@ function checkResponse(response) {
     }
 }
 
-const arrayBuffer = (url, options = {}) => fetch(url, options).then((response) => {
+const arrayBuffer = (url: string, options = {}) => fetch(url, options).then((response) => {
     checkResponse(response);
     return response.arrayBuffer();
 });
@@ -35,7 +39,7 @@ export default {
      *
      * @return {Promise<string>} Promise containing the text.
      */
-    text(url, options = {}) {
+    text(url: RequestInfo, options: RequestInit = {}) {
         return fetch(url, options).then((response) => {
             checkResponse(response);
             return response.text();
@@ -52,7 +56,7 @@ export default {
      *
      * @return {Promise<Object>} Promise containing the JSON object.
      */
-    json(url, options = {}) {
+    json(url: RequestInfo, options: RequestInit = {}) {
         return fetch(url, options).then((response) => {
             checkResponse(response);
             return response.json();
@@ -69,7 +73,7 @@ export default {
      *
      * @return {Promise<Document>} Promise containing the XML Document.
      */
-    xml(url, options = {}) {
+    xml(url: RequestInfo, options: RequestInit = {}) {
         return fetch(url, options).then((response) => {
             checkResponse(response);
             return response.text();
@@ -89,22 +93,16 @@ export default {
      * @return {Promise<THREE.Texture>} Promise containing the
      * [THREE.Texture](https://threejs.org/docs/api/en/textures/Texture.html).
      */
-    texture(url, options = {}) {
-        let res;
-        let rej;
-
+    texture(url: string, options: RequestInit = {}) {
         textureLoader.crossOrigin = options.crossOrigin;
 
         const promise = new Promise((resolve, reject) => {
-            res = resolve;
-            rej = reject;
+            textureLoader.load(url, resolve, () => {}, (event) => {
+                const error = new Error(`Failed to load texture from URL: \`${url}\``);
+                reject(error);
+            });
         });
 
-        textureLoader.load(url, res, () => {}, (event) => {
-            const error = new Error(`Failed to load texture from URL: \`${url}\``);
-            error.originalEvent = event;
-            rej(error);
-        });
         return promise;
     },
 
@@ -131,7 +129,7 @@ export default {
      *
      * @return {Promise<THREE.DataTexture>} Promise containing the DataTexture.
      */
-    textureFloat(url, options = {}) {
+    textureFloat(url: string, options: RequestInit = {}) {
         return arrayBuffer(url, options).then((buffer) => {
             if (buffer.byteLength !== TEXTURE_TILE_SIZE * Float32Array.BYTES_PER_ELEMENT) {
                 throw new Error(`Invalid float data from URL: \`${url}\``);
@@ -179,7 +177,7 @@ export default {
      *     };
      * });
      */
-    multiple(baseUrl, extensions, options = {}) {
+    multiple(baseUrl: string, extensions, options = {}) {
         const promises = [];
         let url;
 

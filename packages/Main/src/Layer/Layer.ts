@@ -5,6 +5,22 @@ import Source from 'Source/Source';
 import { LRUCache } from 'lru-cache';
 import Style from 'Core/Style';
 
+export interface LayerOptions {
+    source: Source | false,
+    name?: string | undefined;
+    style?: Style, // TODO[QB]: StyleLike
+    subdivisionThreshold?: number,
+    addLabelLayer?: boolean,
+    cacheLifeTime?: number,
+    options?: unknown,
+    updateStrategy?: any,
+    zoom?: { min?: number, max?: number },
+    mergeFeatures?: boolean,
+    crs: string,
+}
+
+export type LayerEvents = {}
+
 /**
  * @property {boolean} isLayer - Used to checkout whether this layer is a Layer.
  * Default is true. You should not change this, as it is used internally for
@@ -33,7 +49,47 @@ import Style from 'Core/Style';
  * @property {number} [zoom.min=0] - this is the minimum zoom from which it'll be visible.
  *
  */
-class Layer extends THREE.EventDispatcher {
+abstract class Layer<D, T = D, E extends LayerEvents = {}> extends THREE.EventDispatcher<E> {
+    readonly isLayer: true;
+
+    readonly id: string;
+    name: string | undefined;
+    crs: string;
+
+    source: Source;
+    style: Style; // TODO[QB]: Move style up
+
+    subdivisionThreshold: number; // TODO[QB]: Move up
+    sizeDiagonalTexture: number; // TODO[QB]: Move up
+
+    addLabelLayer: number; // TODO[QB]: Move up
+
+    options: unknown;
+
+    updateStrategy: { // TODO[QB]: Move up and as type union
+        type: number;
+        options: unknown;
+    } | undefined;
+
+    frozen: boolean; // TODO[QB]: Add callback
+
+    zoom: { // TODO[QB]: Should this move up?
+        min?: number;
+        max?: number;
+    }
+
+    info: InfoLayer;
+
+    ready: boolean;
+
+    whenReady: Promise<this>;
+
+    private _promises: Promise<unknown>[];
+
+    cache: LRUCache<{}, {}>; // TODO[QB]: Type this shit
+
+    mergeFeatures: boolean; // TODO[QB]: Move up
+
     /**
      * Don't use directly constructor to instance a new Layer. Instead, use
      * another available type of Layer, implement a new one inheriting from this
@@ -88,9 +144,9 @@ class Layer extends THREE.EventDispatcher {
      * layerToListen.addEventListener('visible-property-changed', (event) => console.log(event));
      * layerToListen.addEventListener('opacity-property-changed', (event) => console.log(event));
      */
-    constructor(id, config = {}) {
+    constructor(id: string, config: LayerOptions) {
         const {
-            source,
+            source = true,
             name,
             style = {},
             subdivisionThreshold = 256,
@@ -101,7 +157,7 @@ class Layer extends THREE.EventDispatcher {
             zoom,
             mergeFeatures = true,
             crs,
-        } = config;
+        } = config ?? {};
 
         super();
 
@@ -269,16 +325,16 @@ class Layer extends THREE.EventDispatcher {
 
     // Placeholder
     // eslint-disable-next-line
-    convert(data) {
+    async convert(data: D, options: unknown): Promise<T> {
         return data;
     }
 
-    getData(from, to) {
+    getData(from: unknown, to: unknown) {
         const key = this.source.getDataKey(this.source.isVectorSource ? to : from);
         let data = this.cache.get(key);
         if (!data) {
             data = this.source.loadData(from, this)
-                .then(feat => this.convert(feat, to), (err) => {
+                .then((feat: D) => this.convert(feat, to), (err) => {
                     throw err;
                 });
             this.cache.set(key, data);
@@ -291,9 +347,11 @@ class Layer extends THREE.EventDispatcher {
      * @param {boolean} [clearCache=false] Whether to clear the layer cache or not
      */
     // eslint-disable-next-line
-    delete(clearCache) {
+    delete(clearCache: boolean) {
         console.warn('Function delete doesn\'t exist for this layer');
     }
+
+    abstract update(): void; // TODO[QB]
 }
 
 export default Layer;

@@ -240,7 +240,7 @@ export function updateLayeredMaterialNodeElevation(context, layer, node, parent)
         err => handlingError(err, node, layer, targetLevel, context.view));
 }
 
-export function removeLayeredMaterialNodeLayer(layerId) {
+export function removeLayeredMaterialNodeLayer(layerId: string) {
     /**
      * @param {TileMesh} node - The node to udpate.
      */

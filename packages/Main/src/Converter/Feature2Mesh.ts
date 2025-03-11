@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import Earcut from 'earcut';
-import { FEATURE_TYPES } from 'Core/Feature';
+import Feature, { FEATURE_TYPES, FeatureCollection } from 'Core/Feature';
 import ReferLayerProperties from 'Layer/ReferencingLayerProperties';
 import { deprecatedFeature2MeshOptions } from 'Core/Deprecated/Undeprecator';
 import { Extent, Coordinates, OrientationUtils } from '@itowns/geographic';
@@ -178,7 +178,7 @@ function addExtrudedPolygonSideFaces(indices, length, offset, count, isClockWise
     }
 }
 
-function featureToPoint(feature, options) {
+function featureToPoint(feature: Feature, options) {
     const ptsIn = feature.vertices;
     const colors = new Uint8Array(ptsIn.length);
     const batchIds = new Uint32Array(ptsIn.length);
@@ -542,7 +542,7 @@ function featureToExtrudedPolygon(feature, options) {
  * @param {*} ptsIn positions of instanced (array double)
  * @returns {THREE.InstancedMesh} Instanced mesh
  */
-function createInstancedMesh(mesh, count, ptsIn) {
+function createInstancedMesh(mesh: THREE.Mesh, count: number, ptsIn: number[]) {
     const instancedMesh = new THREE.InstancedMesh(mesh.geometry, mesh.material, count);
     let index = 0;
     for (let i = 0; i < count * 3; i += 3) {
@@ -563,7 +563,7 @@ function createInstancedMesh(mesh, count, ptsIn) {
  * @param {Object} feature
  * @returns {THREE.Mesh} mesh or GROUP of THREE.InstancedMesh
  */
-function pointsToInstancedMeshes(feature) {
+function pointsToInstancedMeshes(feature: Feature) {
     const ptsIn = feature.vertices;
     const count = feature.geometries.length;
     const modelObject = style.point.model.object;
@@ -588,7 +588,7 @@ function pointsToInstancedMeshes(feature) {
  *
  * @return {THREE.Mesh} mesh or GROUP of THREE.InstancedMesh
  */
-function featureToMesh(feature, options) {
+function featureToMesh(feature: Feature, options) {
     if (!feature.vertices) {
         return;
     }
@@ -670,7 +670,7 @@ export default {
      */
     convert(options = {}) {
         deprecatedFeature2MeshOptions(options);
-        return function _convert(collection) {
+        return function _convert(collection: FeatureCollection) {
             if (!collection) { return; }
 
             if (!options.pointMaterial) {
@@ -680,6 +680,8 @@ export default {
                 options.lineMaterial = ReferLayerProperties(new THREE.LineBasicMaterial(), this);
                 options.polygonMaterial = ReferLayerProperties(new THREE.MeshBasicMaterial(), this);
             }
+
+            console.log(this);
 
             // In the case we didn't instanciate the layer (this) before the convert, we can pass
             // style properties (@link StyleOptions) using options.style.
@@ -702,4 +704,4 @@ export default {
             return featureNode;
         };
     },
-};
+} as const;

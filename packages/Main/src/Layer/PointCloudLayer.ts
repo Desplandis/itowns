@@ -3,6 +3,8 @@ import GeometryLayer from 'Layer/GeometryLayer';
 import PointsMaterial, { PNTS_MODE } from 'Renderer/PointsMaterial';
 import Picking from 'Core/Picking';
 
+import type PointCloudNode from 'Core/PointCloudNode';
+
 const point = new THREE.Vector3();
 const bboxMesh = new THREE.Mesh();
 const box3 = new THREE.Box3();
@@ -131,6 +133,20 @@ function changeAngleRange(layer) {
  * @extends GeometryLayer
  */
 class PointCloudLayer extends GeometryLayer {
+    readonly isPointCloudLayer: true;
+    readonly protocol: 'pointcloud';
+
+    group: THREE.Group;
+    bboxes: THREE.Object3D;
+
+    octreeDepthLimit: number;
+    pointBudget: number;
+    pointSize: number;
+    sseThreshold: number;
+    material: THREE.Material;
+    mode: number;
+    root: PointCloudNode | undefined;
+
     /**
      * Constructs a new instance of point cloud layer.
      * Constructs a new instance of a Point Cloud Layer. This should not be used
@@ -148,7 +164,7 @@ class PointCloudLayer extends GeometryLayer {
      * @param {number}  [options.minElevationRange] - Min value for the elevation range (default value will be taken from the source.metadata).
      * @param {number}  [options.maxElevationRange] - Max value for the elevation range (default value will be taken from the source.metadata).
      */
-    constructor(id, config = {}) {
+    constructor(id: string, config = {}) {
         const {
             object3d = new THREE.Group(),
             group = new THREE.Group(),
@@ -283,7 +299,7 @@ class PointCloudLayer extends GeometryLayer {
         return [this.root];
     }
 
-    update(context, layer, elt) {
+    update(context, layer: this, elt: PointCloudNode) {
         elt.visible = false;
 
         if (this.octreeDepthLimit >= 0 && this.octreeDepthLimit < elt.depth) {
@@ -329,7 +345,7 @@ class PointCloudLayer extends GeometryLayer {
                     priority,
                     redraw: true,
                     earlyDropFunction: cmd => !cmd.requester.visible || !this.visible,
-                }).then((pts) => {
+                }).then((pts: THREE.Object3D) => {
                     elt.obj = pts;
                     // store tightbbox to avoid ping-pong (bbox = larger => visible, tight => invisible)
                     elt.tightbbox = pts.tightbbox;

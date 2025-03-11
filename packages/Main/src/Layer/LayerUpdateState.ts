@@ -4,8 +4,10 @@ const UPDATE_STATE = {
     ERROR: 2,
     DEFINITIVE_ERROR: 3,
     FINISHED: 4,
-};
-const PAUSE_BETWEEN_ERRORS = [1.0, 3.0, 7.0, 60.0];
+} as const;
+const PAUSE_BETWEEN_ERRORS = [1.0, 3.0, 7.0, 60.0] as const;
+
+type State = typeof UPDATE_STATE[keyof typeof UPDATE_STATE];
 
 /**
  * LayerUpdateState is the update state of a layer, for a given object (e.g tile).
@@ -14,6 +16,13 @@ const PAUSE_BETWEEN_ERRORS = [1.0, 3.0, 7.0, 60.0];
  * @constructor
  */
 class LayerUpdateState {
+    state: State;
+    lastErrorTimestamp: number;
+    errorCount: number;
+    failureParams: {
+        lowestLevelError: number;
+    };
+
     constructor() {
         this.state = UPDATE_STATE.IDLE;
         this.lastErrorTimestamp = 0;
@@ -75,12 +84,12 @@ class LayerUpdateState {
         this.state = UPDATE_STATE.FINISHED;
     }
 
-    noData(failureParams) {
+    noData(failureParams: { targetLevel: number }) {
         this.state = UPDATE_STATE.IDLE;
         this.failureParams.lowestLevelError = Math.min(failureParams.targetLevel, this.failureParams.lowestLevelError);
     }
 
-    failure(timestamp, definitive, failureParams) {
+    failure(timestamp: number, definitive: boolean, failureParams: { targetLevel: number }) {
         if (failureParams && failureParams.targetLevel != undefined) {
             this.failureParams.lowestLevelError = Math.min(failureParams.targetLevel, this.failureParams.lowestLevelError);
         }
