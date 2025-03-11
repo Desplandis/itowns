@@ -32,6 +32,11 @@ export interface ExtentLike {
     readonly north: number;
 }
 
+type MutableVector2Like = {
+    x: number;
+    y: number;
+}
+
 /**
  * A class representing a geographical extent.
  *
@@ -167,9 +172,13 @@ class Extent {
      *
      * @param target - optional target
      */
+    planarDimensions(): THREE.Vector2;
+    planarDimensions<T extends MutableVector2Like>(target: T): T;
     planarDimensions(target = new THREE.Vector2()) {
         // Calculte the dimensions for x and y
-        return target.set(Math.abs(this.east - this.west), Math.abs(this.north - this.south));
+        target.x = Math.abs(this.east - this.west);
+        target.y = Math.abs(this.north - this.south);
+        return target;
     }
 
     /**
@@ -180,6 +189,8 @@ class Extent {
      *
      * @param target - optional target
      */
+    geodeticDimensions(): THREE.Vector2;
+    geodeticDimensions<T extends MutableVector2Like>(target: T): T;
     geodeticDimensions(target = new THREE.Vector2()) {
         // set 3 corners extent
         cNorthWest.crs = this.crs;
@@ -191,10 +202,9 @@ class Extent {
         cNorthEast.setFromValues(this.east, this.north, 0);
 
         // calcul geodetic distance northWest/northEast and northWest/southWest
-        return target.set(
-            cNorthWest.geodeticDistanceTo(cNorthEast),
-            cNorthWest.geodeticDistanceTo(cSouthWest),
-        );
+        target.x = cNorthWest.geodeticDistanceTo(cNorthEast);
+        target.y = cNorthWest.geodeticDistanceTo(cSouthWest);
+        return target;
     }
 
     /**
@@ -204,6 +214,8 @@ class Extent {
      *
      * @param target - optional target
      */
+    spatialEuclideanDimensions(): THREE.Vector2;
+    spatialEuclideanDimensions<T extends MutableVector2Like>(target: T): T;
     spatialEuclideanDimensions(target = new THREE.Vector2()) {
         // set 3 corners extent
         cNorthWest.crs = this.crs;
@@ -215,10 +227,9 @@ class Extent {
         cNorthEast.setFromValues(this.east, this.north, 0);
 
         // calcul chord distance northWest/northEast and northWest/southWest
-        return target.set(
-            cNorthWest.spatialEuclideanDistanceTo(cNorthEast),
-            cNorthWest.spatialEuclideanDistanceTo(cSouthWest),
-        );
+        target.x = cNorthWest.spatialEuclideanDistanceTo(cNorthEast);
+        target.y = cNorthWest.spatialEuclideanDistanceTo(cSouthWest);
+        return target;
     }
 
     /**
