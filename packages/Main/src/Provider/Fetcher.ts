@@ -26,18 +26,17 @@ const arrayBuffer = (url: string, options: RequestInit = {}) =>
  * Utilitary to fetch resources from a server using the [fetch API](
  * https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch).
  *
- * @module Fetcher
  */
 export default {
     /**
-     * Wrapper over fetch to get some text.
+     * A fetch wrapper that returns the response as plain text.
      *
-     * @param {string} url - The URL of the resources to fetch.
-     * @param {Object} options - Fetch options (passed directly to `fetch()`),
-     * see [the syntax for more information](
+     * @param url - The URL of the resource you want to fetch.
+     * @param options - Fetch options (passed directly to `fetch()`), see
+     * [the syntax for more information](
      * https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch#Syntax).
      *
-     * @return {Promise<string>} Promise containing the text.
+     * @returns A promise that resolves to a string.
      */
     text(url: string, options: RequestInit = {}): Promise<string> {
         return fetch(url, options).then((response) => {
@@ -47,14 +46,14 @@ export default {
     },
 
     /**
-     * Little wrapper over fetch to get some JSON.
+     * A fetch wrapper thet returns the response as a JSON object.
      *
-     * @param {string} url - The URL of the resources to fetch.
-     * @param {Object} options - Fetch options (passed directly to `fetch()`),
-     * see [the syntax for more information](
+     * @param url - The URL of the resource you want to fetch.
+     * @param options - Fetch options (passed directly to `fetch()`), see
+     * [the syntax for more information](
      * https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch#Syntax).
      *
-     * @return {Promise<Object>} Promise containing the JSON object.
+     * @returns A promise that resolves to a JSON object.
      */
     json(url: string, options: RequestInit = {}): Promise<unknown> {
         return fetch(url, options).then((response) => {
@@ -64,14 +63,14 @@ export default {
     },
 
     /**
-     * Wrapper over fetch to get some XML.
+     * A fetch wrapper that returns the response as an XML document.
      *
-     * @param {string} url - The URL of the resources to fetch.
-     * @param {Object} options - Fetch options (passed directly to `fetch()`),
-     * see [the syntax for more information](
+     * @param url - The URL of the resource you want to fetch.
+     * @param options - Fetch options (passed directly to `fetch()`), see
+     * [the syntax for more information](
      * https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch#Syntax).
      *
-     * @return {Promise<Document>} Promise containing the XML Document.
+     * @returns A promise that resolves to an XML Document.
      */
     xml(url: string, options: RequestInit = {}): Promise<XMLDocument> {
         return fetch(url, options).then((response) => {
@@ -81,16 +80,16 @@ export default {
     },
 
     /**
-     * Wrapper around [THREE.TextureLoader](https://threejs.org/docs/#api/en/loaders/TextureLoader).
+     * A wrapper around [THREE.TextureLoader](https://threejs.org/docs/#api/en/loaders/TextureLoader).
      *
-     * @param {string} url - The URL of the resources to fetch.
-     * @param {Object} options - Fetch options (passed directly to `fetch()`),
-     * see [the syntax for more information](
+     * @param url - The URL of the resource you want to fetch.
+     * @param options - Fetch options (passed directly to `fetch()`), see
+     * [the syntax for more information](
      * https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch#Syntax).
      * Note that THREE.js docs mentions `withCredentials`, but it is not
      * actually used in [THREE.TextureLoader](https://threejs.org/docs/#api/en/loaders/TextureLoader).
      *
-     * @return {Promise<THREE.Texture>} Promise containing the
+     * @returns A promise that resolves to a
      * [THREE.Texture](https://threejs.org/docs/api/en/textures/Texture.html).
      */
     texture(url: string, options: RequestInit & { crossOrigin?: string } = {}): Promise<Texture> {
@@ -110,27 +109,28 @@ export default {
     },
 
     /**
-     * Wrapper over fetch to get some ArrayBuffer.
+     * A fetch wrapper that returns the response as an array buffer.
      *
-     * @param {string} url - The URL of the resources to fetch.
-     * @param {Object} options - Fetch options (passed directly to `fetch()`),
-     * see [the syntax for more information](
+     * @param url - The URL of the resource you want to fetch.
+     * @param options - Fetch options (passed directly to `fetch()`), see
+     * [the syntax for more information](
      * https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch#Syntax).
      *
-     * @return {Promise<ArrayBuffer>} Promise containing the ArrayBuffer.
+     *
+     * @returns A promise that resolves to an array buffer.
      */
     arrayBuffer,
 
     /**
-     * Wrapper over fetch to get some
+     * A fetch wrapper that returns the response as a
      * [THREE.DataTexture](https://threejs.org/docs/#api/en/textures/DataTexture).
      *
-     * @param {string} url - The URL of the resources to fetch.
-     * @param {Object} options - Fetch options (passed directly to `fetch()`),
-     * see [the syntax for more information](
+     * @param url - The URL of the resource you want to fetch.
+     * @param options - Fetch options (passed directly to `fetch()`), see
+     * [the syntax for more information](
      * https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch#Syntax).
      *
-     * @return {Promise<THREE.DataTexture>} Promise containing the DataTexture.
+     * @returns A promise that resolves to a DataTexture.
      */
     textureFloat(url: string, options: RequestInit = {}): Promise<DataTexture> {
         return arrayBuffer(url, options).then((buffer) => {
@@ -138,7 +138,10 @@ export default {
                 throw new Error(`Invalid float data from URL: \`${url}\``);
             }
             const data = new Float32Array(buffer);
-            const texture = new DataTexture(data, TEXTURE_TILE_DIM, TEXTURE_TILE_DIM, RedFormat, FloatType);
+            const texture = new DataTexture(data,
+                TEXTURE_TILE_DIM, TEXTURE_TILE_DIM,
+                RedFormat, FloatType,
+            );
             texture.internalFormat = 'R32F';
             texture.needsUpdate = true;
             return texture;
@@ -149,19 +152,20 @@ export default {
      * Wrapper over fetch to get a bunch of files sharing the same name, but
      * different extensions.
      *
-     * @param {string} baseUrl - The shared URL of the resources to fetch.
-     * @param {Object} extensions - An object containing arrays. The keys of
+     * @param baseUrl - The shared URL of the resources to fetch.
+     * @param extensions - An object containing arrays. The keys of
      * each of this array are available fetch type, such as `text`, `json` or
      * even `arrayBuffer`. The arrays contains the extensions to append after
      * the `baseUrl` (see example below).
-     * @param {Object} options - Fetch options (passed directly to `fetch()`),
-     * see [the syntax for more information](
+     * @param options - Fetch options (passed directly to `fetch()`), see
+     * [the syntax for more information](
      * https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch#Syntax).
      *
-     * @return {Promise[]} An array of promises, containing all the files,
-     * organized by their extensions (see the example below).
+     * @returns An array of promises, containing all the files, organized by
+     * their extensions (see the example below).
      *
      * @example
+     * ```
      * itowns.Fetcher.multiple('http://geo.server/shapefile', {
      *     // will fetch:
      *     // - http://geo.server/shapefile.shp
@@ -179,6 +183,7 @@ export default {
      *         prj: string
      *     };
      * });
+     * ```
      */
     multiple(baseUrl: string, extensions: Record<string, string>, options = {}) {
         const promises = [];
