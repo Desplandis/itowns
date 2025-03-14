@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import DEMUtils from 'Utils/DEMUtils';
 import { Coordinates } from '@itowns/geographic';
 
+import { applyToHTML, getTextAnchorPosition } from 'Utils/CanvasStyleUtils';
+
 const coord = new Coordinates('EPSG:4326');
 let rect;
 
@@ -93,13 +95,13 @@ class Label extends THREE.Object3D {
         this.content.style.position = 'absolute';
 
         if (style.isStyle) {
-            this.anchor = style.getTextAnchorPosition();
+            this.anchor = getTextAnchorPosition(style);
             this.styleOffset = style.text.offset;
             if (typeof content === 'string') {
                 if (style.text.haloWidth > 0) {
                     this.content.classList.add('itowns-stroke-single');
                 }
-                style.applyToHTML(this.content)
+                applyToHTML(style, this.content)
                     .then((icon) => {
                         if (icon) { // Not sure if that test is needed...
                             this.icon = icon;

@@ -1,9 +1,9 @@
 import { featureFilter } from '@maplibre/maplibre-gl-style-spec';
-import StyleOptions from 'Core/StyleOptions';
 import TMSSource from 'Source/TMSSource';
 import URLBuilder from 'Provider/URLBuilder';
 import Fetcher from 'Provider/Fetcher';
 import urlParser from 'Parser/MapBoxUrlParser';
+import { setFromVectorTileLayer } from 'Utils/VectorTileStyleUtils';
 
 function toTMSUrl(url) {
     return url.replace(/\{/g, '${');
@@ -117,7 +117,7 @@ class VectorTilesSource extends TMSSource {
                     if (layer['source-layer'] === undefined) {
                         getPropertiesFromRefLayer(mvtStyle.layers, layer);
                     }
-                    const style = StyleOptions.setFromVectorTileLayer(layer, this.sprites, this.symbolToCircle);
+                    const style = setFromVectorTileLayer(layer, this.sprites, this.symbolToCircle);
                     this.styles[layer.id] = style;
 
                     if (!this.layers[layer['source-layer']]) {

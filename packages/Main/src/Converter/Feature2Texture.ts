@@ -1,11 +1,13 @@
 import * as THREE from 'three';
-import { FEATURE_TYPES } from 'Core/Feature';
+import Feature, { FEATURE_TYPES, FeatureCollection } from 'Core/Feature';
 import { Extent, Coordinates } from '@itowns/geographic';
 import Style, { StyleContext } from 'Core/Style';
+import { applyToCanvasPolygon } from 'Utils/CanvasStyleUtils';
+
+import type { PointStyle } from 'Core/StyleOptions';
 
 const defaultStyle = new Style();
 const context = new StyleContext();
-let style;
 
 /**
  * Draw polygon (contour, line edge and fill) based on feature vertices into canvas
@@ -21,7 +23,16 @@ let style;
  * @param      {Number} invCtxScale - The ration to scale line width and radius circle.
  * @param      {Boolean} canBeFilled - true if feature.type == FEATURE_TYPES.POLYGON
  */
-function drawPolygon(ctx, vertices, indices = [{ offset: 0, count: 1 }], size, extent, invCtxScale, canBeFilled) {
+function drawPolygon(
+    ctx: CanvasRenderingContext2D,
+    vertices: number[],
+    indices = [{ offset: 0, count: 1 }],
+    size: number,
+    extent: Extent,
+    style: Style,
+    invCtxScale: number,
+    canBeFilled: boolean,
+): void {
     if (vertices.length === 0) {
         return;
     }
@@ -38,31 +49,43 @@ function drawPolygon(ctx, vertices, indices = [{ offset: 0, count: 1 }], size, e
             }
         }
     }
-    style.applyToCanvasPolygon(ctx, path, invCtxScale, canBeFilled);
+    applyToCanvasPolygon(ctx, style, path, invCtxScale, canBeFilled);
 }
 
-function drawPoint(ctx, x, y, invCtxScale) {
+function drawPoint(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    style: Partial<PointStyle>,
+    invCtxScale: number,
+) {
     ctx.beginPath();
-    const opacity = style.point.opacity == undefined ? 1.0 : style.point.opacity;
+    const opacity = style.opacity == undefined ? 1.0 : style.opacity;
     if (opacity !== ctx.globalAlpha) {
         ctx.globalAlpha = opacity;
     }
 
-    ctx.arc(x, y, (style.point.radius || 3.0) * invCtxScale, 0, 2 * Math.PI, false);
-    if (style.point.color) {
-        ctx.fillStyle = style.point.color;
+    ctx.arc(x, y, (style.radius || 3.0) * invCtxScale, 0, 2 * Math.PI, false);
+    if (style.color) {
+        ctx.fillStyle = style.color;
         ctx.fill();
     }
-    if (style.point.line) {
-        ctx.lineWidth = (style.point.width || 1.0) * invCtxScale;
-        ctx.strokeStyle = style.point.line;
+    if (style.line) {
+        ctx.lineWidth = (style.width || 1.0) * invCtxScale;
+        ctx.strokeStyle = style.line;
         ctx.stroke();
     }
 }
 
 const coord = new Coordinates('EPSG:4326', 0, 0, 0);
 
-function drawFeature(ctx, feature, extent, invCtxScale) {
+function drawFeature(
+    ctx: CanvasRenderingContext2D,
+    feature: Feature,
+    extent: Extent,
+    style: Style,
+    invCtxScale: number,
+) {
     const extentDim = extent.planarDimensions();
     const scaleRadius = extentDim.x / ctx.canvas.width;
 
@@ -85,12 +108,12 @@ function drawFeature(ctx, feature, extent, invCtxScale) {
                     for (let j = offset; j < count; j += feature.size) {
                         coord.setFromArray(feature.vertices, j);
                         if (extent.isPointInside(coord, px)) {
-                            drawPoint(ctx, feature.vertices[j], feature.vertices[j + 1], invCtxScale);
+                            drawPoint(ctx, feature.vertices[j], feature.vertices[j + 1], style.point, invCtxScale);
                         }
                     }
                 }
             } else {
-                drawPolygon(ctx, feature.vertices, geometry.indices, feature.size, extent, invCtxScale, (feature.type == FEATURE_TYPES.POLYGON));
+                drawPolygon(ctx, feature.vertices, geometry.indices, feature.size, extent, style, invCtxScale, (feature.type == FEATURE_TYPES.POLYGON));
             }
         }
     }
@@ -109,8 +132,14 @@ const featureExtent = new Extent('EPSG:4326', 0, 0, 0, 0);
 export default {
     // backgroundColor is a THREE.Color to specify a color to fill the texture
     // with, given there is no feature passed in parameter
-    createTextureFromFeature(collection, extent, sizeTexture, layerStyle, backgroundColor) {
-        style = layerStyle || defaultStyle;
+    createTextureFromFeature(
+        collection: FeatureCollection,
+        extent: Extent,
+        sizeTexture: number,
+        layerStyle: Style,
+        backgroundColor: THREE.Color,
+    ) {
+        const style = layerStyle || defaultStyle;
         style.setContext(context);
         let texture;
 
@@ -124,7 +153,7 @@ export default {
 
             c.width = sizeTexture;
             c.height = sizeTexture;
-            const ctx = c.getContext('2d', { willReadFrequently: true });
+            const ctx = c.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
             if (backgroundColor) {
                 ctx.fillStyle = backgroundColor.getStyle();
                 ctx.fillRect(0, 0, sizeTexture, sizeTexture);
@@ -165,7 +194,7 @@ export default {
             // Draw the canvas
             for (const feature of collection.features) {
                 context.setFeature(feature);
-                drawFeature(ctx, feature, featureExtent, invCtxScale);
+                drawFeature(ctx, feature, featureExtent, style, invCtxScale);
             }
 
             texture = new THREE.CanvasTexture(c);
