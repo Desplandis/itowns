@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { Coordinates } from '@itowns/geographic';
-import placeObjectOnGround from 'Utils/placeObjectOnGround';
+import placeObjectOnGround from './placeObjectOnGround';
+import {
+    readTextureValueNearestFiltering,
+    readTextureValueWithBilinearFiltering,
+} from './ElevationTextureUtils';
 
 const FAST_READ_Z = 0;
 const PRECISE_READ_Z = 1;
@@ -106,129 +110,9 @@ function tileAt(pt, tile) {
     }
 }
 
-let _canvas;
-function _readTextureValueAt(metadata, texture, ...uv) {
-    for (let i = 0; i < uv.length; i += 2) {
-        uv[i] = THREE.MathUtils.clamp(uv[i], 0, texture.image.width - 1);
-        uv[i + 1] = THREE.MathUtils.clamp(uv[i + 1], 0, texture.image.height - 1);
-    }
-
-    if (texture.image.data) {
-        // read a single value
-        if (uv.length === 2) {
-            const v = texture.image.data[uv[1] * texture.image.width + uv[0]];
-            return v != metadata.noDataValue ? v : undefined;
-        }
-        // or read multiple values
-        const result = [];
-        for (let i = 0; i < uv.length; i += 2) {
-            const v = texture.image.data[uv[i + 1] * texture.image.width + uv[i]];
-            result.push(v != metadata.noDataValue ? v : undefined);
-        }
-        return result;
-    } else {
-        if (!_canvas) {
-            _canvas = document.createElement('canvas');
-            _canvas.width = 2;
-            _canvas.height = 2;
-        }
-        let minx = Infinity;
-        let miny = Infinity;
-        let maxx = -Infinity;
-        let maxy = -Infinity;
-        for (let i = 0; i < uv.length; i += 2) {
-            minx = Math.min(uv[i], minx);
-            miny = Math.min(uv[i + 1], miny);
-            maxx = Math.max(uv[i], maxx);
-            maxy = Math.max(uv[i + 1], maxy);
-        }
-        const dw = maxx - minx + 1;
-        const dh = maxy - miny + 1;
-        _canvas.width = Math.max(_canvas.width, dw);
-        _canvas.height = Math.max(_canvas.height, dh);
-
-        const ctx = _canvas.getContext('2d', { willReadFrequently: true });
-        ctx.drawImage(texture.image, minx, miny, dw, dh, 0, 0, dw, dh);
-        const d = ctx.getImageData(0, 0, dw, dh);
-
-        const result = [];
-        for (let i = 0; i < uv.length; i += 2) {
-            const ox = uv[i] - minx;
-            const oy = uv[i + 1] - miny;
-
-            // d is 4 bytes per pixel
-            const v = THREE.MathUtils.lerp(
-                metadata.colorTextureElevationMinZ,
-                metadata.colorTextureElevationMaxZ,
-                d.data[4 * oy * dw + 4 * ox] / 255);
-            result.push(v != metadata.noDataValue ? v : undefined);
-        }
-        if (uv.length === 2) {
-            return result[0];
-        } else {
-            return result;
-        }
-    }
-}
-
-function _convertUVtoTextureCoords(texture, u, v) {
-    const width = texture.image.width;
-    const height = texture.image.height;
-
-    const up = Math.max(0, u * width - 0.5);
-    const vp = Math.max(0, v * height - 0.5);
-
-    const u1 = Math.floor(up);
-    const u2 = Math.ceil(up);
-    const v1 = Math.floor(vp);
-    const v2 = Math.ceil(vp);
-
-    const wu = up - u1;
-    const wv = vp - v1;
-
-    return { u1, u2, v1, v2, wu, wv };
-}
-
-function _readTextureValueNearestFiltering(metadata, texture, vertexU, vertexV) {
-    const coords = _convertUVtoTextureCoords(texture, vertexU, vertexV);
-
-    const u = (coords.wu <= 0) ? coords.u1 : coords.u2;
-    const v = (coords.wv <= 0) ? coords.v1 : coords.v2;
-
-    return _readTextureValueAt(metadata, texture, u, v);
-}
-
-function _lerpWithUndefinedCheck(x, y, t) {
-    if (x == undefined) {
-        return y;
-    } else if (y == undefined) {
-        return x;
-    } else {
-        return THREE.MathUtils.lerp(x, y, t);
-    }
-}
-
-export function readTextureValueWithBilinearFiltering(metadata, texture, vertexU, vertexV) {
-    const coords = _convertUVtoTextureCoords(texture, vertexU, vertexV);
-
-    const [z11, z21, z12, z22] = _readTextureValueAt(metadata, texture,
-        coords.u1, coords.v1,
-        coords.u2, coords.v1,
-        coords.u1, coords.v2,
-        coords.u2, coords.v2);
-
-
-    // horizontal filtering
-    const zu1 = _lerpWithUndefinedCheck(z11, z21, coords.wu);
-    const zu2 = _lerpWithUndefinedCheck(z12, z22, coords.wu);
-    // then vertical filtering
-    return _lerpWithUndefinedCheck(zu1, zu2, coords.wv);
-}
-
-
 function _readZFast(layer, texture, uv) {
     const elevationLayer = layer.attachedLayers.filter(l => l.isElevationLayer)[0];
-    return _readTextureValueNearestFiltering(elevationLayer, texture, uv.x, uv.y);
+    return readTextureValueNearestFiltering(elevationLayer, texture, uv.x, uv.y);
 }
 
 const bary = new THREE.Vector3();
