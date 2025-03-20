@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ELEVATION_MODES } from 'Renderer/LayeredMaterial';
-import { checkNodeElevationTextureValidity, insertSignificantValuesFromParent, computeMinMaxElevation } from 'Parser/XbilParser';
+import { checkNodeElevationTextureValidity, insertSignificantValuesFromParent, computeMinMaxElevation } from 'Utils/ElevationTextureUtils';
 
 export const EMPTY_TEXTURE_ZOOM = -1;
 
