@@ -1,10 +1,20 @@
-import * as THREE from 'three';
+import { MathUtils } from 'three';
+import type { Texture, Vector4Like } from 'three';
 
-let _canvas;
-function _readTextureValueAt(metadata, texture, ...uv) {
+interface Metadata {
+    noDataValue: number;
+    colorTextureElevationMinZ: number;
+    colorTextureElevationMaxZ: number;
+    zmin: number | null;
+    zmax: number | null;
+}
+
+let _canvas: HTMLCanvasElement;
+
+function _readTextureValueAt(metadata: Metadata, texture: Texture, ...uv: number[]) {
     for (let i = 0; i < uv.length; i += 2) {
-        uv[i] = THREE.MathUtils.clamp(uv[i], 0, texture.image.width - 1);
-        uv[i + 1] = THREE.MathUtils.clamp(uv[i + 1], 0, texture.image.height - 1);
+        uv[i] = MathUtils.clamp(uv[i], 0, texture.image.width - 1);
+        uv[i + 1] = MathUtils.clamp(uv[i + 1], 0, texture.image.height - 1);
     }
 
     if (texture.image.data) {
@@ -41,7 +51,7 @@ function _readTextureValueAt(metadata, texture, ...uv) {
         _canvas.width = Math.max(_canvas.width, dw);
         _canvas.height = Math.max(_canvas.height, dh);
 
-        const ctx = _canvas.getContext('2d', { willReadFrequently: true });
+        const ctx = _canvas.getContext('2d', {willReadFrequently: true }) as CanvasRenderingContext2D;
         ctx.drawImage(texture.image, minx, miny, dw, dh, 0, 0, dw, dh);
         const d = ctx.getImageData(0, 0, dw, dh);
 
@@ -51,7 +61,7 @@ function _readTextureValueAt(metadata, texture, ...uv) {
             const oy = uv[i + 1] - miny;
 
             // d is 4 bytes per pixel
-            const v = THREE.MathUtils.lerp(
+            const v = MathUtils.lerp(
                 metadata.colorTextureElevationMinZ,
                 metadata.colorTextureElevationMaxZ,
                 d.data[4 * oy * dw + 4 * ox] / 255);
@@ -65,7 +75,7 @@ function _readTextureValueAt(metadata, texture, ...uv) {
     }
 }
 
-function _convertUVtoTextureCoords(texture, u, v) {
+function _convertUVtoTextureCoords(texture: Texture, u: number, v: number) {
     const width = texture.image.width;
     const height = texture.image.height;
 
@@ -83,7 +93,7 @@ function _convertUVtoTextureCoords(texture, u, v) {
     return { u1, u2, v1, v2, wu, wv };
 }
 
-export function readTextureValueNearestFiltering(metadata, texture, vertexU, vertexV) {
+export function readTextureValueNearestFiltering(metadata: Metadata, texture: Texture, vertexU: number, vertexV: number) {
     const coords = _convertUVtoTextureCoords(texture, vertexU, vertexV);
 
     const u = (coords.wu <= 0) ? coords.u1 : coords.u2;
@@ -92,17 +102,17 @@ export function readTextureValueNearestFiltering(metadata, texture, vertexU, ver
     return _readTextureValueAt(metadata, texture, u, v);
 }
 
-function _lerpWithUndefinedCheck(x, y, t) {
+function _lerpWithUndefinedCheck(x: number | undefined, y: number | undefined, t: number) {
     if (x == undefined) {
         return y;
     } else if (y == undefined) {
         return x;
     } else {
-        return THREE.MathUtils.lerp(x, y, t);
+        return MathUtils.lerp(x, y, t);
     }
 }
 
-export function readTextureValueWithBilinearFiltering(metadata, texture, vertexU, vertexV) {
+export function readTextureValueWithBilinearFiltering(metadata: Metadata, texture: Texture, vertexU: number, vertexV: number) {
     const coords = _convertUVtoTextureCoords(texture, vertexU, vertexV);
 
     const [z11, z21, z12, z22] = _readTextureValueAt(metadata, texture,
@@ -119,7 +129,7 @@ export function readTextureValueWithBilinearFiltering(metadata, texture, vertexU
     return _lerpWithUndefinedCheck(zu1, zu2, coords.wv);
 }
 
-function minMax4Corners(texture, pitch, options) {
+function minMax4Corners(texture: Texture, pitch: Vector4Like, options: Metadata) {
     const u = pitch.x;
     const v = pitch.y;
     const w = pitch.z;
@@ -151,7 +161,7 @@ function minMax4Corners(texture, pitch, options) {
  * @param      {number}          [options.zmax]   The maximum elevation value after which it will be clamped
  * @return     {Object}  The minimum and maximum elevation.
  */
-export function computeMinMaxElevation(texture, pitch, options) {
+export function computeMinMaxElevation(texture: Texture, pitch: Vector4Like, options: Metadata) {
     const { width, height, data } = texture.image;
     if (!data) {
         // Return null values means there's no elevation values.
@@ -207,7 +217,7 @@ export function computeMinMaxElevation(texture, pitch, options) {
 }
 
 // We check if the elevation texture has some significant values through corners
-export function checkNodeElevationTextureValidity(data, noDataValue) {
+export function checkNodeElevationTextureValidity(data: number[], noDataValue: number) {
     const l = data.length;
     return data[0] > noDataValue &&
            data[l - 1] > noDataValue &&
@@ -216,7 +226,7 @@ export function checkNodeElevationTextureValidity(data, noDataValue) {
 }
 
 // This function replaces noDataValue by significant values from parent texture (or 0)
-export function insertSignificantValuesFromParent(data, dataParent = () => 0, noDataValue) {
+export function insertSignificantValuesFromParent(data: number[], dataParent = (i: number) => 0, noDataValue: number) {
     for (let i = 0, l = data.length; i < l; ++i) {
         if (data[i] === noDataValue) {
             data[i] = dataParent(i);
