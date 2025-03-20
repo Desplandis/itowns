@@ -225,6 +225,7 @@ describe('TileMesh', function () {
         const rasterNode = elevationLayer.setupRasterNode(tileMesh);
         const texture = new THREE.Texture();
         texture.extent = new Tile('EPSG:3857', 4, 10, 10);
+        texture.isDataTexture = true;
         texture.image = {
             width: 3,
             height: 3,
