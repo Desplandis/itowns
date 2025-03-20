@@ -1,5 +1,11 @@
 import { MathUtils } from 'three';
-import type { Texture, Vector4Like } from 'three';
+import type { DataTexture, Texture, Vector4Like, TypedArray } from 'three';
+
+interface ImageTexture extends Texture {
+    image: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | ImageBitmap | OffscreenCanvas;
+}
+
+type ElevationTexture = DataTexture | ImageTexture;
 
 interface Metadata {
     noDataValue: number;
@@ -11,71 +17,99 @@ interface Metadata {
 
 let _canvas: HTMLCanvasElement;
 
-function _readTextureValueAt(metadata: Metadata, texture: Texture, ...uv: number[]) {
-    for (let i = 0; i < uv.length; i += 2) {
-        uv[i] = MathUtils.clamp(uv[i], 0, texture.image.width - 1);
-        uv[i + 1] = MathUtils.clamp(uv[i + 1], 0, texture.image.height - 1);
+/**
+ * Reads and interprets the given pixels from a data texture as elevation
+ * values. `noDataValues` are replaced by `undefined`.
+ * 
+ * **Warning**: This only supports single-component textures for now (e.g. xBIL
+ * textures which have a single Float32 component).
+ */
+function readDataTextureValueAt(
+    texture: DataTexture,
+    metadata: { noDataValue: number },
+    ...pixels: [number, number][]
+): Array<number | undefined> {
+    const result: Array<number | undefined> = [];
+    for (let i = 0; i < pixels.length; i += 1) {
+        const v = (texture.image.data as TypedArray)[pixels[i][1] * texture.image.width + pixels[i][0]];
+        result.push(v !== metadata.noDataValue ? v : undefined)
+    }
+    console.log(texture.image);
+    return result;
+}
+
+/**
+ * Reads and interprets the given pixels from an image texture as elevation
+ * values. `noDataValues` are replaced by `undefined`.
+ * 
+ * **Warning**: This only supports greyscale textures and performs a linear
+ * interpolation of the red component between `colorTextureElevationMinZ` and
+ * `colorTextureElevationMaxZ`.
+ */
+function readImageTextureValueAt(
+    texture: ImageTexture,
+    metadata: Metadata,
+    ...uvs: [number, number][]
+): Array<number | undefined> {
+    // TODO: we shoud create an utility providing a shared context, this is
+    // not the first time I encounter this pattern in iTowns...
+    if (!_canvas) {
+        _canvas = document.createElement('canvas');
+        _canvas.width = 2;
+        _canvas.height = 2;
+    }
+    let minx = Infinity;
+    let miny = Infinity;
+    let maxx = -Infinity;
+    let maxy = -Infinity;
+    for (let i = 0; i < uvs.length; i += 1) {
+        minx = Math.min(uvs[i][0], minx);
+        miny = Math.min(uvs[i][1], miny);
+        maxx = Math.max(uvs[i][0], maxx);
+        maxy = Math.max(uvs[i][1], maxy);
+    }
+    const dw = maxx - minx + 1;
+    const dh = maxy - miny + 1;
+    _canvas.width = Math.max(_canvas.width, dw);
+    _canvas.height = Math.max(_canvas.height, dh);
+
+    const ctx = _canvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+    ctx.drawImage(texture.image, minx, miny, dw, dh, 0, 0, dw, dh);
+    const d = ctx.getImageData(0, 0, dw, dh);
+
+    const result: Array<number | undefined> = [];
+    for (let i = 0; i < uvs.length; i += 1) {
+        const ox = uvs[i][0] - minx;
+        const oy = uvs[i][1] - miny;
+
+        // d is 4 bytes per pixel
+        const v = MathUtils.lerp(
+            metadata.colorTextureElevationMinZ,
+            metadata.colorTextureElevationMaxZ,
+            d.data[4 * oy * dw + 4 * ox] / 255);
+        result.push(v != metadata.noDataValue ? v : undefined);
+    }
+    return result;
+}
+
+function readTextureValueAt(
+    texture: ElevationTexture,
+    metadata: Metadata,
+    ...pixels: [number, number][]
+): Array<number | undefined> {
+    for (let i = 0; i < pixels.length; i += 1) {
+        pixels[i][0] = MathUtils.clamp(pixels[i][0], 0, texture.image.width - 1);
+        pixels[i][1] = MathUtils.clamp(pixels[i][1], 0, texture.image.height - 1);
     }
 
-    if (texture.image.data) {
-        // read a single value
-        if (uv.length === 2) {
-            const v = texture.image.data[uv[1] * texture.image.width + uv[0]];
-            return v != metadata.noDataValue ? v : undefined;
-        }
-        // or read multiple values
-        const result = [];
-        for (let i = 0; i < uv.length; i += 2) {
-            const v = texture.image.data[uv[i + 1] * texture.image.width + uv[i]];
-            result.push(v != metadata.noDataValue ? v : undefined);
-        }
-        return result;
+    if ('isDataTexture' in texture) {
+        return readDataTextureValueAt(texture, metadata, ...pixels);
     } else {
-        if (!_canvas) {
-            _canvas = document.createElement('canvas');
-            _canvas.width = 2;
-            _canvas.height = 2;
-        }
-        let minx = Infinity;
-        let miny = Infinity;
-        let maxx = -Infinity;
-        let maxy = -Infinity;
-        for (let i = 0; i < uv.length; i += 2) {
-            minx = Math.min(uv[i], minx);
-            miny = Math.min(uv[i + 1], miny);
-            maxx = Math.max(uv[i], maxx);
-            maxy = Math.max(uv[i + 1], maxy);
-        }
-        const dw = maxx - minx + 1;
-        const dh = maxy - miny + 1;
-        _canvas.width = Math.max(_canvas.width, dw);
-        _canvas.height = Math.max(_canvas.height, dh);
-
-        const ctx = _canvas.getContext('2d', {willReadFrequently: true }) as CanvasRenderingContext2D;
-        ctx.drawImage(texture.image, minx, miny, dw, dh, 0, 0, dw, dh);
-        const d = ctx.getImageData(0, 0, dw, dh);
-
-        const result = [];
-        for (let i = 0; i < uv.length; i += 2) {
-            const ox = uv[i] - minx;
-            const oy = uv[i + 1] - miny;
-
-            // d is 4 bytes per pixel
-            const v = MathUtils.lerp(
-                metadata.colorTextureElevationMinZ,
-                metadata.colorTextureElevationMaxZ,
-                d.data[4 * oy * dw + 4 * ox] / 255);
-            result.push(v != metadata.noDataValue ? v : undefined);
-        }
-        if (uv.length === 2) {
-            return result[0];
-        } else {
-            return result;
-        }
+        return readImageTextureValueAt(texture, metadata, ...pixels);
     }
 }
 
-function _convertUVtoTextureCoords(texture: Texture, u: number, v: number) {
+function convertUVtoPixelCoords(texture: ElevationTexture, u: number, v: number) {
     const width = texture.image.width;
     const height = texture.image.height;
 
@@ -93,16 +127,11 @@ function _convertUVtoTextureCoords(texture: Texture, u: number, v: number) {
     return { u1, u2, v1, v2, wu, wv };
 }
 
-export function readTextureValueNearestFiltering(metadata: Metadata, texture: Texture, vertexU: number, vertexV: number) {
-    const coords = _convertUVtoTextureCoords(texture, vertexU, vertexV);
-
-    const u = (coords.wu <= 0) ? coords.u1 : coords.u2;
-    const v = (coords.wv <= 0) ? coords.v1 : coords.v2;
-
-    return _readTextureValueAt(metadata, texture, u, v);
-}
-
-function _lerpWithUndefinedCheck(x: number | undefined, y: number | undefined, t: number) {
+function lerpWithUndefinedCheck(
+    x: number | undefined,
+    y: number | undefined,
+    t: number,
+): number | undefined {
     if (x == undefined) {
         return y;
     } else if (y == undefined) {
@@ -112,32 +141,52 @@ function _lerpWithUndefinedCheck(x: number | undefined, y: number | undefined, t
     }
 }
 
-export function readTextureValueWithBilinearFiltering(metadata: Metadata, texture: Texture, vertexU: number, vertexV: number) {
-    const coords = _convertUVtoTextureCoords(texture, vertexU, vertexV);
+export function readTextureValueNearestFiltering(
+    texture: ElevationTexture,
+    metadata: Metadata,
+    vertexU: number,
+    vertexV: number,
+): number | undefined {
+    const coords = convertUVtoPixelCoords(texture, vertexU, vertexV);
 
-    const [z11, z21, z12, z22] = _readTextureValueAt(metadata, texture,
-        coords.u1, coords.v1,
-        coords.u2, coords.v1,
-        coords.u1, coords.v2,
-        coords.u2, coords.v2);
+    const u = (coords.wu <= 0) ? coords.u1 : coords.u2;
+    const v = (coords.wv <= 0) ? coords.v1 : coords.v2;
+
+    return readTextureValueAt(texture, metadata, [u, v])[0]; // correct by single arg
+}
+
+export function readTextureValueWithBilinearFiltering(
+    texture: ElevationTexture,
+    metadata: Metadata,
+    vertexU: number,
+    vertexV: number,
+) {
+    const coords = convertUVtoPixelCoords(texture, vertexU, vertexV);
+
+    const [z11, z21, z12, z22] = readTextureValueAt(texture, metadata,
+        [coords.u1, coords.v1],
+        [coords.u2, coords.v1],
+        [coords.u1, coords.v2],
+        [coords.u2, coords.v2],
+    );
 
 
     // horizontal filtering
-    const zu1 = _lerpWithUndefinedCheck(z11, z21, coords.wu);
-    const zu2 = _lerpWithUndefinedCheck(z12, z22, coords.wu);
+    const zu1 = lerpWithUndefinedCheck(z11, z21, coords.wu);
+    const zu2 = lerpWithUndefinedCheck(z12, z22, coords.wu);
     // then vertical filtering
-    return _lerpWithUndefinedCheck(zu1, zu2, coords.wv);
+    return lerpWithUndefinedCheck(zu1, zu2, coords.wv);
 }
 
-function minMax4Corners(texture: Texture, pitch: Vector4Like, options: Metadata) {
+function minMax4Corners(texture: DataTexture, pitch: Vector4Like, options: Metadata) {
     const u = pitch.x;
     const v = pitch.y;
     const w = pitch.z;
     const z = [
-        readTextureValueWithBilinearFiltering(options, texture, u, v),
-        readTextureValueWithBilinearFiltering(options, texture, u + w, v),
-        readTextureValueWithBilinearFiltering(options, texture, u + w, v + w),
-        readTextureValueWithBilinearFiltering(options, texture, u, v + w),
+        readTextureValueWithBilinearFiltering(texture, options, u, v),
+        readTextureValueWithBilinearFiltering(texture, options, u + w, v),
+        readTextureValueWithBilinearFiltering(texture, options, u + w, v + w),
+        readTextureValueWithBilinearFiltering(texture, options, u, v + w),
     ].filter(val => val != undefined);
 
     if (z.length) {
