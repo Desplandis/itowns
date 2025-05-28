@@ -129,6 +129,8 @@ export const ELEVATION_MODES = {
     DATA: 2,
 } as const;
 
+export type ElevationModes = typeof ELEVATION_MODES[keyof typeof ELEVATION_MODES];
+
 /**
  * Convenience type that wraps all of the generic type's fields in
  * [THREE.IUniform]s.
@@ -488,7 +490,7 @@ export class LayeredMaterial extends THREE.ShaderMaterial {
     }
 
     public addColorTile(rasterTile: RasterColorTile) {
-        if (rasterTile.layer.id in this.colorTiles) {
+        if (rasterTile.id in this.colorTiles) {
             console.warn(
                 'Layer "{layer.id}" already present in material, overwriting.',
             );
