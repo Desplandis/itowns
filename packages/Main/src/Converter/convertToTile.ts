@@ -7,7 +7,11 @@ import { geoidLayerIsVisible } from 'Layer/GeoidLayer';
 
 const dimensions = new THREE.Vector2();
 
-function setTileFromTiledLayer(tile, tileLayer) {
+interface TileLayerLike {
+    diffuse: string;
+}
+
+function setTileFromTiledLayer(tile: TileMesh, tileLayer: { diffuse: string, showOutline: boolean, isGlobeLayer: boolean }) {
     if (tileLayer.diffuse) {
         tile.material.diffuse = tileLayer.diffuse;
     }
@@ -32,7 +36,7 @@ function setTileFromTiledLayer(tile, tileLayer) {
 }
 
 export default {
-    convert(requester, extent, layer) {
+    convert(requester: TileMesh, extent: Extent, layer: Layer) {
         const builder = layer.builder;
         const parent = requester;
         const level = (parent !== undefined) ? (parent.level + 1) : 0;

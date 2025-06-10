@@ -13,6 +13,8 @@ import Picking from 'Core/Picking';
 import LabelLayer from 'Layer/LabelLayer';
 import ObjectRemovalHelper from 'Process/ObjectRemovalHelper';
 
+import type Layer from 'Layer/Layer';
+
 export const VIEW_EVENTS = {
     /**
      * Fires when all the layers of the view are considered initialized.
@@ -33,14 +35,7 @@ export const VIEW_EVENTS = {
     DISPOSED: 'disposed',
 };
 
-/**
- * Fired on current view's domElement when double right-clicking it. Copies all properties of the second right-click
- * MouseEvent (such as cursor position).
- * @event View#dblclick-right
- * @property {string} type  dblclick-right
- */
-
-function _preprocessLayer(view, layer, parentLayer) {
+function _preprocessLayer(view: View, layer: Layer<unknown, any>, parentLayer: Layer<unknown, any>) {
     const source = layer.source;
     if (parentLayer && !layer.extent) {
         layer.extent = parentLayer.extent;
@@ -114,7 +109,7 @@ const ray = new THREE.Ray();
 const direction = new THREE.Vector3();
 const positionVector = new THREE.Vector3();
 const coordinates = new Coordinates('EPSG:4326');
-const viewers = [];
+const viewers: View[] = [];
 // Size of the camera frustrum, in meters
 let screenMeters;
 
@@ -131,7 +126,21 @@ let id = 0;
  * @property {THREE.WebGLRenderer} renderer - threejs webglrenderer rendering this view
  */
 class View extends THREE.EventDispatcher {
-    #layers = [];
+
+    id: number;
+    referenceCrs: string;
+    domElement: HTMLDivElement;
+    mainLoop: MainLoop;
+    scene: THREE.Scene;
+    camera: Camera;
+
+    _frameRequesters: Record<string, (() => void)[]>;
+    _resizeListener: () => void;
+    _changeSources: Set<Layer<unknown, any>>;
+    _delayedFrameRequesterRemoval: (() => void)[];
+    _allLayersAreReadyCallback: () => void;
+
+    #layers: Layer<unknown, any>[] = [];
     #pixelDepthBuffer = new Uint8Array(4);
     #fullSizeDepthBuffer;
     /**
@@ -161,7 +170,7 @@ class View extends THREE.EventDispatcher {
      * This color is applied to terrain if there isn't color layer on terrain extent (by example on pole).
      * @param {boolean} [options.enableFocusOnStart=true] - enable focus on dom element on start.
      */
-    constructor(crs, viewerDiv, options = {}) {
+    constructor(crs: string, viewerDiv: HTMLDivElement, options = {}) {
         if (!viewerDiv) {
             throw new Error('Invalid viewerDiv parameter (must non be null/undefined)');
         }
@@ -173,7 +182,7 @@ class View extends THREE.EventDispatcher {
 
         this.referenceCrs = crs;
 
-        let engine;
+        let engine: c3DEngine;
         // options.renderer can be 2 separate things:
         //   - an actual renderer (in this case we don't use viewerDiv)
         //   - options for the renderer to be created
@@ -240,7 +249,7 @@ class View extends THREE.EventDispatcher {
         }
 
         // Create a custom `dblclick-right` event that is triggered when double right-clicking
-        let rightClickTimeStamp;
+        let rightClickTimeStamp: number | undefined;
         this.domElement.addEventListener('mouseup', (event) => {
             if (event.button === 2) {  // If pressed mouse button is right button
                 // If time between two right-clicks is bellow 500 ms, triggers a `dblclick-right` event
@@ -260,7 +269,7 @@ class View extends THREE.EventDispatcher {
      * Get the Threejs renderer used to render this view.
      * @returns {THREE.WebGLRenderer} the WebGLRenderer used to render this view.
      */
-    get renderer() {
+    get renderer(): THREE.WebGLRenderer {
         return this.mainLoop?.gfxEngine?.getRenderer();
     }
 
@@ -268,7 +277,7 @@ class View extends THREE.EventDispatcher {
      * Get the threejs Camera of this view
      * @returns {THREE.Camera} the threejs camera of this view
      */
-    get camera3D() {
+    get camera3D(): THREE.Camera {
         return this.camera?.camera3D;
     }
 
@@ -333,7 +342,7 @@ class View extends THREE.EventDispatcher {
      * @param {Layer=} parentLayer it's the layer to which the layer will be attached.
      * @return {Promise} a promise resolved with the new layer object when it is fully initialized or rejected if any error occurred.
      */
-    addLayer(layer, parentLayer) {
+    addLayer(layer: Layer<unknown, any>, parentLayer: Layer<unknown, any>) {
         if (!layer || !layer.isLayer) {
             return Promise.reject(new Error('Add Layer type object'));
         }
@@ -373,6 +382,10 @@ class View extends THREE.EventDispatcher {
         if (layer.object3d && !layer.object3d.parent && layer.object3d !== this.scene) {
             this.scene.add(layer.object3d);
         }
+
+        layer.startup().then(() => {
+
+        });
 
         Promise.all(layer._promises).then(() => {
             layer._resolve();
@@ -484,7 +497,7 @@ class View extends THREE.EventDispatcher {
      * @param {function(Layer):boolean} filter
      * @returns {Array<Layer>}
      */
-    getLayers(filter) {
+    getLayers(filter?: (layer: Layer<unknown, any>) => boolean) {
         const result = [];
         for (const layer of this.#layers) {
             if (!filter || filter(layer)) {
@@ -508,7 +521,7 @@ class View extends THREE.EventDispatcher {
      * @return {Layer}  The layer by identifier.
      */
 
-    getLayerById(layerId) {
+    getLayerById(layerId: string) {
         return this.getLayers(l => l.id === layerId)[0];
     }
 
@@ -557,7 +570,7 @@ class View extends THREE.EventDispatcher {
      * MainLoop update with the time delta between last update, or 0 if the MainLoop
      * has just been relaunched.
      */
-    addFrameRequester(when, frameRequester) {
+    addFrameRequester(when: string, frameRequester: () => void) {
         if (typeof frameRequester !== 'function') {
             throw new Error('frameRequester must be a function');
         }
@@ -578,7 +591,7 @@ class View extends THREE.EventDispatcher {
      * {@link MAIN_LOOP_EVENTS}.
      * @param {FrameRequester} frameRequester
      */
-    removeFrameRequester(when, frameRequester) {
+    removeFrameRequester(when: string, frameRequester: () => void) {
         if (this._frameRequesters[when].includes(frameRequester)) {
             this._delayedFrameRequesterRemoval.push({ when, frameRequester });
         } else {

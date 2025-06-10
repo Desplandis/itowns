@@ -2,25 +2,48 @@ import * as THREE from 'three';
 import Feature2Texture from 'Converter/Feature2Texture';
 import { Extent } from '@itowns/geographic';
 
+import type Tile from 'Core/Tile/Tile';
+import type { FeatureCollection } from 'Core/Feature';
+
 const extentTexture = new Extent('EPSG:4326');
 
-const textureLayer = (texture, layer) => {
+interface LayerLike {
+    crs: string;
+    subdivisionThreshold: number;
+    minFilter: THREE.MinificationTextureFilter;
+    magFilter: THREE.MagnificationTextureFilter;
+    transparent: boolean;
+    source: {
+        backgroundLayer: {
+            paint: {
+                'background-color': string;
+            };
+        };
+    };
+}
+
+interface ColorLayerLike extends LayerLike {
+    readonly isColorLayer: boolean;
+}
+
+
+const textureLayer = (texture: THREE.Texture, layer: LayerLike) => {
     texture.generateMipmaps = false;
     texture.magFilter = layer.magFilter || THREE.LinearFilter;
     texture.minFilter = layer.minFilter || THREE.LinearFilter;
     return texture;
 };
 
-function textureColorLayer(texture, layer) {
+function textureColorLayer(texture: THREE.Texture, layer: LayerLike) {
     texture.anisotropy = 16;
     texture.premultiplyAlpha = layer.transparent;
     return textureLayer(texture, layer);
 }
 
 export default {
-    convert(data, destinationTile, layer) {
+    convert(data: FeatureCollection | THREE.Texture, destinationTile: Tile, layer: LayerLike) {
         let texture;
-        if (data.isFeatureCollection) {
+        if ('isFeatureCollection' in data) {
             const backgroundLayer = layer.source.backgroundLayer;
             const backgroundColor = (backgroundLayer && backgroundLayer.paint) ?
                 new THREE.Color(backgroundLayer.paint['background-color']) :

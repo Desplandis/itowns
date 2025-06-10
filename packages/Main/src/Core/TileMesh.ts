@@ -2,6 +2,16 @@ import * as THREE from 'three';
 import { geoidLayerIsVisible } from 'Layer/GeoidLayer';
 import { tiledCovering } from 'Core/Tile/Tile';
 
+import type { LayeredMaterial } from 'Renderer/LayeredMaterial';
+import type { TileGeometry } from 'Core/TileGeometry';
+import type { Extent } from '@itowns/geographic';
+import type OBB from 'Renderer/OBB';
+import type LayerUpdateState from 'Layer/LayerUpdateState';
+
+interface TileLayerLike {
+    tileMatrixSets: string[];
+}
+
 /**
  * A TileMesh is a THREE.Mesh with a geometricError and an OBB
  * The objectId property of the material is the with the id of the TileMesh
@@ -11,10 +21,26 @@ import { tiledCovering } from 'Core/Tile/Tile';
  * @param {Extent} extent - the tile extent
  * @param {?number} level - the tile level (default = 0)
  */
-class TileMesh extends THREE.Mesh {
+class TileMesh extends THREE.Mesh<TileGeometry, LayeredMaterial> {
     #_tms = new Map();
     #visible = true;
-    constructor(geometry, material, layer, extent, level = 0) {
+
+    readonly isTileMesh: true;
+
+    layer: TileLayerLike;
+    extent: Extent;
+    level: number;
+    obb: OBB;
+    boundingSphere: THREE.Sphere;
+    layerUpdateState: Record<string, LayerUpdateState>;
+    geoidHeight: number;
+    link: {
+        parent?: TileMesh;
+        children?: TileMesh[];
+    };
+    rotationAutoUpdate: boolean;
+
+    constructor(geometry: TileGeometry, material: LayeredMaterial, layer: TileLayerLike, extent: Extent, level = 0) {
         super(geometry, material);
 
         if (!extent) {
@@ -22,7 +48,21 @@ class TileMesh extends THREE.Mesh {
         }
         this.layer = layer;
         this.extent = extent;
-        this.extent.zoom = level;
+        // TODO: Used in FeatureProcessing, this is fragile
+        // this.extent.zoom = level;
+
+        let _zoom = level;
+
+        Object.defineProperty(this.extent, 'zoom', {
+            get() {
+                console.log('get zoom', this);
+                return _zoom;
+            },
+            set(v) {
+                console.log('set zoom');
+                _zoom = v;
+            },
+        });
 
         this.level = level;
 
@@ -66,7 +106,7 @@ class TileMesh extends THREE.Mesh {
      * @param {number}  [elevation.max]
      * @param {number}  [elevation.scale]
      */
-    setBBoxZ(elevation) {
+    setBBoxZ(elevation: { min?: number, max?: number, scale?: number, geoidHeight?: number }) {
         elevation.geoidHeight = geoidLayerIsVisible(this.layer) ? this.geoidHeight : 0;
         this.obb.updateZ(elevation);
         if (this.horizonCullingPointElevationScaled) {
@@ -75,8 +115,8 @@ class TileMesh extends THREE.Mesh {
         this.obb.box3D.getBoundingSphere(this.boundingSphere);
     }
 
-    getExtentsByProjection(crs) {
-        return this.#_tms.get(crs);
+    getExtentsByProjection(tms: string) {
+        return this.#_tms.get(tms);
     }
 
     /**
@@ -87,7 +127,7 @@ class TileMesh extends THREE.Mesh {
      *
      * @return {TileMesh} the resulting common ancestor
      */
-    findCommonAncestor(tile) {
+    findCommonAncestor(tile: TileMesh): TileMesh | undefined {
         if (!tile) {
             return undefined;
         }
@@ -95,13 +135,16 @@ class TileMesh extends THREE.Mesh {
             if (tile.id == this.id) {
                 return tile;
             } else if (tile.level != 0) {
+                // @ts-ignore By design, the parent is always a TileMesh
                 return this.parent.findCommonAncestor(tile.parent);
             } else {
                 return undefined;
             }
         } else if (tile.level < this.level) {
+            // @ts-ignore By design, the parent is always a TileMesh
             return this.parent.findCommonAncestor(tile);
         } else {
+            // @ts-ignore By design, the parent is always a TileMesh
             return this.findCommonAncestor(tile.parent);
         }
     }

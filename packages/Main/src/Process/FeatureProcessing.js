@@ -29,9 +29,17 @@ export default {
             return;
         }
 
-        const extentsDestination = node.getExtentsByProjection(layer.source.crs) || [node.extent];
+        // const extentsDestination = node.getExtentsByProjection(layer.source.crs) || [node.extent];
+        let extentsDestination = node.getExtentsByProjection(layer.source.crs);
+        let zoomDest;
+        if (!extentsDestination) {
+            extentsDestination = [node.extent];
+            zoomDest = node.level;
+        } else {
+            zoomDest = extentsDestination[0].zoom;
+        }
 
-        const zoomDest = extentsDestination[0].zoom;
+        // const zoomDest = extentsDestination[0].zoom;
 
         // check if it's tile level is equal to display level layer.
         // TO DO updata at all level asked

@@ -2,6 +2,17 @@ import * as THREE from 'three';
 import InfoLayer from 'Layer/InfoLayer';
 import Source from 'Source/Source';
 import { LRUCache } from 'lru-cache';
+import { ProjectionDefinition } from '@maplibre/maplibre-gl-style-spec';
+
+export interface LayerConfig {
+    source?: Source | boolean;
+    name?: string;
+    subdivisionThreshold?: number;
+    cacheLifeTime?: number;
+    options?: Record<string, any> | undefined;
+    zoom?: { min: number; max: number };
+    crs: ProjectionDefinition;
+}
 
 /**
  * @property {boolean} isLayer - Used to checkout whether this layer is a Layer.
@@ -31,7 +42,30 @@ import { LRUCache } from 'lru-cache';
  * @property {number} [zoom.min=0] - this is the minimum zoom from which it'll be visible.
  *
  */
-class Layer extends THREE.EventDispatcher {
+abstract class Layer<K, V extends {}, E extends {} = {}> extends THREE.EventDispatcher<E> {
+    readonly isLayer: boolean;
+
+    readonly id: string;
+    crs: ProjectionDefinition;
+
+    name: string | undefined;
+    source: Source;
+    subdivisionThreshold: number;
+    sizeDiagonalTexture: number;
+    options: unknown;
+
+    frozen: boolean;
+    zoom: { min: number; max: number };
+    info: InfoLayer;
+    ready: boolean;
+
+    cache: LRUCache<string, V, unknown>;
+    whenReady: Promise<this>;
+
+    private _promises: Promise<any>[];
+    private _resolve!: (value: this) => void;
+    private _reject!: (reason?: any) => void;
+
     /**
      * Don't use directly constructor to instance a new Layer. Instead, use
      * another available type of Layer, implement a new one inheriting from this
@@ -77,7 +111,7 @@ class Layer extends THREE.EventDispatcher {
      * layerToListen.addEventListener('visible-property-changed', (event) => console.log(event));
      * layerToListen.addEventListener('opacity-property-changed', (event) => console.log(event));
      */
-    constructor(id, config = {}) {
+    constructor(id: string, config: LayerConfig) {
         const {
             source,
             name,
@@ -90,45 +124,30 @@ class Layer extends THREE.EventDispatcher {
 
         super();
 
-        /**
-         * @type {boolean}
-         * @readonly
-         */
         this.isLayer = true;
 
-        /**
-         * @type {string}
-         * @readonly
-         */
         this.id = id;
         Object.defineProperty(this, 'id', {
             writable: false,
         });
 
-        /**
-         * @type {string}
-         */
         this.name = name;
 
         if (source === undefined || source === true) {
             throw new Error(`Layer ${id} needs Source`);
         }
-        /**
-         * @type {Source}
-         */
+
         this.source = source || new Source({ url: 'none' });
 
         this.crs = crs;
 
-        /**
-         * @type {number}
-         */
         this.subdivisionThreshold = subdivisionThreshold;
         this.sizeDiagonalTexture =  (2 * (this.subdivisionThreshold * this.subdivisionThreshold)) ** 0.5;
 
         // Default properties
         this.options = options;
 
+        this.frozen = false;
         this.defineLayerProperty('frozen', false);
 
         this.zoom = {
@@ -152,13 +171,9 @@ class Layer extends THREE.EventDispatcher {
         /**
          * @type {Promise<this>}
          */
-        this.whenReady = new Promise((re, rj) => {
-            this._resolve = re;
-            this._reject = rj;
-        }).then(() => {
-            this.ready = true;
-            this.source.onLayerAdded({ out: this });
-            return this;
+        this.whenReady = new Promise<this>((resolve, reject) => {
+            this._resolve = resolve;
+            this._reject = reject;
         });
 
         this._promises.push(this.source.whenReady);
@@ -178,6 +193,22 @@ class Layer extends THREE.EventDispatcher {
         this._promises.push(new Promise((re) => { resolve = re; }));
         return resolve;
     }
+
+    // TODO: Pass context to these functions
+    async startup(): Promise<void> {
+        try {
+            await Promise.all(this._promises);
+            this.ready = true;
+            this.source.onLayerAdded({ out: this });
+            this._resolve(this);
+        } catch (error) {
+            this._reject(error);
+        }
+    }
+
+    abstract update(): Promise<void>;
+    abstract preUpdate(): Promise<void>;
+    abstract postUpdate(): Promise<void>;
 
     /**
      * Defines a property for this layer, with a default value and a callback
@@ -207,7 +238,7 @@ class Layer extends THREE.EventDispatcher {
      * changed. Parameters are the layer the property is defined on, and the
      * name of the property.
      */
-    defineLayerProperty(propertyName, defaultValue, onChange) {
+    defineLayerProperty<T extends keyof this>(propertyName: T, defaultValue: this[T], onChange?: (layer: this, propertyName: T) => void) {
         const existing = Object.getOwnPropertyDescriptor(this, propertyName);
         if (!existing || !existing.set) {
             let property = this[propertyName] == undefined ? defaultValue : this[propertyName];
@@ -219,9 +250,11 @@ class Layer extends THREE.EventDispatcher {
                     get: () => property,
                     set: (newValue) => {
                         if (property !== newValue) {
-                            const event = { type: `${propertyName}-property-changed`, previous: {}, new: {} };
-                            event.previous[propertyName] = property;
-                            event.new[propertyName] = newValue;
+                            const event = {
+                                type: `${String(propertyName)}-property-changed`,
+                                previous: property,
+                                new: newValue,
+                            };
                             property = newValue;
                             if (onChange) {
                                 onChange(this, propertyName);
@@ -239,7 +272,7 @@ class Layer extends THREE.EventDispatcher {
         return data;
     }
 
-    getData(from, to) {
+    getData(from: K, to: K): Promise<V> {
         const key = this.source.getDataKey(this.source.isVectorSource ? to : from);
         let data = this.cache.get(key);
         if (!data) {
@@ -257,7 +290,7 @@ class Layer extends THREE.EventDispatcher {
      * @param {boolean} [clearCache=false] Whether to clear the layer cache or not
      */
     // eslint-disable-next-line
-    delete(clearCache) {
+    delete(clearCache: boolean) {
         console.warn('Function delete doesn\'t exist for this layer');
     }
 }
