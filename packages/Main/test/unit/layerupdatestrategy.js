@@ -133,7 +133,7 @@ describe('Handling no data source error', function () {
     it('STRATEGY_PROGRESSIVE', () => {
         layer.updateStrategy = {
             type: STRATEGY_PROGRESSIVE,
-            options: {/* increment: number */}
+            options: {/* increment: number */},
         };
         while (!LOADED) {
             const targetLevel = chooseNextLevelToFetch(layer.updateStrategy.type, node, 20, nodeLayer.level, layer, failureParams);
