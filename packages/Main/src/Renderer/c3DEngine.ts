@@ -1,9 +1,3 @@
-/**
- * Generated On: 2015-10-5
- * Class: c3DEngine
- * Description: 3DEngine est l'interface avec le framework webGL.
- */
-
 import * as THREE from 'three';
 import { isLogDepthBufferSupported, updateCapabilities } from 'Core/System/Capabilities';
 import { unpack1K } from 'Renderer/LayeredMaterial';
@@ -12,8 +6,31 @@ import { deprecatedC3DEngineWebGLOptions } from 'Core/Deprecated/Undeprecator';
 import WEBGL from 'ThreeExtended/capabilities/WebGL';
 
 const depthRGBA = new THREE.Vector4();
+
+interface ViewLike {
+    scene: THREE.Scene;
+    camera3D: THREE.PerspectiveCamera | THREE.OrthographicCamera;
+}
+
+interface C3DEngineOptions {
+    antialias?: boolean;
+    alpha?: boolean;
+    logarithmicDepthBuffer?: boolean;
+}
+
 class c3DEngine {
-    constructor(rendererOrDiv, options = {}) {
+    renderer: THREE.WebGLRenderer;
+    width: number;
+    height: number;
+    positionBuffer: Uint8Array | null;
+    _nextThreejsLayer: number;
+    fullSizeRenderTarget: THREE.WebGLRenderTarget;
+    label2dRenderer: Label2DRenderer;
+
+    renderView: (this: c3DEngine, view: ViewLike) => void;
+    onWindowResize: (this: c3DEngine, w: number, h: number) => void;
+
+    constructor(rendererOrDiv: THREE.WebGLRenderer | HTMLDivElement, options: C3DEngineOptions = {}) {
         deprecatedC3DEngineWebGLOptions(options);
 
         // pick sensible default options
@@ -31,12 +48,13 @@ class c3DEngine {
         // If it is a renderer, we check the renderer.domElement parameter which can be :
         //    - a domElement, in this case we use this domElement as a support
         //    - a canvas, in this case we use the canvas parent (which should be a domElement) as a support
-        let renderer;
-        let viewerDiv;
-        if (rendererOrDiv.domElement) {
+        let renderer: THREE.WebGLRenderer | undefined;
+        let viewerDiv: HTMLDivElement;
+        if ('domElement' in rendererOrDiv) {
             renderer = rendererOrDiv;
             viewerDiv = renderer.domElement instanceof HTMLDivElement ?
-                renderer.domElement : renderer.domElement.parentElement;
+                renderer.domElement :
+                renderer.domElement.parentElement as HTMLDivElement;
         } else {
             viewerDiv = rendererOrDiv;
         }
@@ -51,10 +69,10 @@ class c3DEngine {
         this.fullSizeRenderTarget.texture.minFilter = THREE.LinearFilter;
         this.fullSizeRenderTarget.texture.magFilter = THREE.NearestFilter;
         this.fullSizeRenderTarget.depthBuffer = true;
-        this.fullSizeRenderTarget.depthTexture = new THREE.DepthTexture();
+        this.fullSizeRenderTarget.depthTexture = new THREE.DepthTexture(1, 1);
         this.fullSizeRenderTarget.depthTexture.type = THREE.UnsignedShortType;
 
-        this.renderView = function _(view) {
+        this.renderView = function _(this: c3DEngine, view: ViewLike) {
             this.renderer.clear();
             if (view._camXR) {
                 this.renderer.render(view.scene, view._camXR);
@@ -71,7 +89,7 @@ class c3DEngine {
          * @param {number} w
          * @param {number} h
          */
-        this.onWindowResize = function _(w, h) {
+        this.onWindowResize = function _(this: c3DEngine, w: number, h: number) {
             this.width = w;
             this.height = h;
             this.fullSizeRenderTarget.setSize(this.width, this.height);
@@ -92,8 +110,8 @@ class c3DEngine {
                 logarithmicDepthBuffer: options.logarithmicDepthBuffer,
             });
             this.renderer.domElement.style.position = 'relative';
-            this.renderer.domElement.style.zIndex = 0;
-            this.renderer.domElement.style.top = 0;
+            this.renderer.domElement.style.zIndex = '0';
+            this.renderer.domElement.style.top = '0';
         } catch (ex) {
             if (!WEBGL.isWebGL2Available()) {
                 viewerDiv.appendChild(WEBGL.getErrorMessage(2));
@@ -118,7 +136,7 @@ class c3DEngine {
         this.renderer.debug.checkShaderErrors = __DEBUG__;
 
         if (!renderer) {
-            this.renderer.setPixelRatio(viewerDiv.devicePixelRatio);
+            this.renderer.setPixelRatio(window.devicePixelRatio);
             this.renderer.setSize(viewerDiv.clientWidth, viewerDiv.clientHeight);
             viewerDiv.appendChild(this.renderer.domElement);
         }
@@ -148,7 +166,7 @@ class c3DEngine {
      * @return {THREE.RenderTarget} - Uint8Array, 4 bytes per pixel. The first pixel in
      * the array is the bottom-left pixel.
      */
-    renderViewToBuffer(view, zone) {
+    renderViewToBuffer(view: ViewLike, zone: { x: number, y: number, width: number, height: number, buffer?: Uint8Array }) {
         if (!zone) {
             zone = {
                 x: 0,
@@ -158,15 +176,15 @@ class c3DEngine {
             };
         }
 
-        zone.buffer = zone.buffer || new Uint8Array(4 * zone.width * zone.height);
+        const buffer = zone.buffer || new Uint8Array(4 * zone.width * zone.height);
 
         this.renderViewToRenderTarget(view, this.fullSizeRenderTarget, zone);
 
         this.renderer.readRenderTargetPixels(
             this.fullSizeRenderTarget,
-            zone.x, this.height - (zone.y + zone.height), zone.width, zone.height, zone.buffer);
+            zone.x, this.height - (zone.y + zone.height), zone.width, zone.height, buffer);
 
-        return zone.buffer;
+        return buffer;
     }
 
     /**
@@ -177,7 +195,7 @@ class c3DEngine {
      * @param {object} [zone] - partial zone to render (zone x/y uses view coordinates) Note: target must contain complete zone
      * @return {THREE.RenderTarget} - the destination render target
      */
-    renderViewToRenderTarget(view, target, zone) {
+    renderViewToRenderTarget(view: ViewLike, target: THREE.WebGLRenderTarget, zone: { x: number, y: number, width: number, height: number }) {
         if (!target) {
             target = this.fullSizeRenderTarget;
         }
@@ -197,16 +215,16 @@ class c3DEngine {
 
         this.renderer.setRenderTarget(target);
         this.renderer.clear(true, true, false);
-        this.renderer.render(view.scene, view.camera.camera3D);
+        this.renderer.render(view.scene, view.camera3D);
         this.renderer.setRenderTarget(current);
 
         this.fullSizeRenderTarget.scissorTest = false;
         return target;
     }
 
-    bufferToImage(pixelBuffer, width, height) {
+    bufferToImage(pixelBuffer: Uint8ClampedArray, width: number, height: number) {
         const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const ctx = canvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
 
         // size the canvas to your desired image
         canvas.width = width;
@@ -226,7 +244,7 @@ class c3DEngine {
         return image;
     }
 
-    depthBufferRGBAValueToOrthoZ(depthBufferRGBA, camera) {
+    depthBufferRGBAValueToOrthoZ(depthBufferRGBA: Uint8ClampedArray, camera: THREE.PerspectiveCamera | THREE.OrthographicCamera) {
         depthRGBA.fromArray(depthBufferRGBA).divideScalar(255.0);
 
         if (isLogDepthBufferSupported() && camera.type == 'PerspectiveCamera') {

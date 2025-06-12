@@ -8,9 +8,18 @@ function isIntersectedOrOverlaped(a, b) {
 
 const frustum = new THREE.Frustum();
 
+type Label = any;
+
 // A grid to manage labels on the screen.
 export class ScreenGrid {
-    constructor(x = 12, y = 10, width, height) {
+    x: number;
+    y: number;
+    grid: Label[][];
+    visible: any[];
+    width: number;
+    height: number;
+
+    constructor(x = 12, y = 10, width: number, height: number) {
         this.x = x;
         this.y = y;
 
@@ -90,6 +99,13 @@ const worldPosition = new THREE.Vector3();
  * It is instanciated in `c3DEngine`, as another renderer to handles Labels.
  */
 class Label2DRenderer {
+    domElement: HTMLDivElement;
+    garbage: HTMLDivElement;
+    halfWidth: number;
+    halfHeight: number;
+    grid: ScreenGrid;
+    infoTileLayer: any | undefined;
+
     constructor() {
         this.domElement = document.createElement('div');
         this.domElement.style.overflow = 'hidden';
@@ -97,7 +113,7 @@ class Label2DRenderer {
         this.domElement.style.top = '0';
         this.domElement.style.height = '100%';
         this.domElement.style.width = '100%';
-        this.domElement.style.zIndex = 1;
+        this.domElement.style.zIndex = '1';
 
         // Used to destroy labels that are not added to the DOM
         this.garbage = document.createElement('div');
@@ -131,7 +147,7 @@ class Label2DRenderer {
         this.domElement.appendChild(layer.domElement.dom);
     }
 
-    render(scene, camera) {
+    render(scene: THREE.Scene, camera: THREE.Camera) {
         const labelLayers = this.infoTileLayer && this.infoTileLayer.layer.attachedLayers.filter(l => l.isLabelLayer && l.visible);
         if (labelLayers.length == 0) { return; }
         this.grid.reset();
@@ -180,7 +196,7 @@ class Label2DRenderer {
         });
     }
 
-    culling(label, camera) {
+    culling(label: any, camera: THREE.Camera) {
         label.getWorldPosition(worldPosition);
         // Check if the frustum contains tle label
         if (!frustum.containsPoint(worldPosition.applyMatrix4(camera.matrixWorldInverse)) ||
@@ -206,7 +222,7 @@ class Label2DRenderer {
         }
     }
 
-    removeLabelDOM(label) {
+    removeLabelDOM(label: any) {
         this.garbage.appendChild(label.content);
         this.garbage.innerHTML = '';
     }

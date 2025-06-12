@@ -3,6 +3,9 @@ import Picking from 'Core/Picking';
 import { CACHE_POLICIES } from 'Core/Scheduler/Cache';
 import ObjectRemovalHelper from 'Process/ObjectRemovalHelper';
 
+import type * as THREE from 'three';
+import { ColorLayer } from 'Main';
+
 /**
  * Fires when the opacity of the layer has changed.
  * @event GeometryLayer#opacity-property-changed
@@ -19,6 +22,14 @@ import ObjectRemovalHelper from 'Process/ObjectRemovalHelper';
  * This property is used only if the layer is attached to {@link TiledGeometryLayer}.
  */
 class GeometryLayer extends Layer {
+    readonly isGeometryLayer = true;
+
+    readonly object3d: THREE.Object3D;
+
+    opacity: number;
+    wireframe: boolean;
+    attachedLayers: Layer[];
+
     /**
      * A layer usually managing a geometry to display on a view. For example, it
      * can be a layer of buildings extruded from a a WFS stream.
@@ -54,7 +65,7 @@ class GeometryLayer extends Layer {
      * // Add the layer
      * view.addLayer(geometry);
      */
-    constructor(id, object3d, config = {}) {
+    constructor(id: string, object3d: THREE.Object3D, config = {}) {
         const {
             cacheLifeTime = CACHE_POLICIES.GEOMETRY,
             visible = true,
@@ -142,7 +153,7 @@ class GeometryLayer extends Layer {
     // object to update for attached layer.
     // See 3dtilesLayer or PotreeLayer for examples.
     // eslint-disable-next-line arrow-body-style
-    getObjectToUpdateForAttachedLayers(obj) {
+    getObjectToUpdateForAttachedLayers(obj: THREE.Mesh) {
         if (obj.parent && obj.material) {
             return {
                 element: obj,
@@ -157,7 +168,7 @@ class GeometryLayer extends Layer {
 
     // Placeholder
     // eslint-disable-next-line
-    culling() {
+    culling(): boolean {
         return true;
     }
 
@@ -168,7 +179,7 @@ class GeometryLayer extends Layer {
      * @param {Layer} layer - The layer to attach, that must have an `update`
      * method.
      */
-    attach(layer) {
+    attach(layer: ColorLayer | ElevationLayer | FeatureGeometryLayer) {
         if (!layer.update) {
             throw new Error(`Missing 'update' function -> can't attach layer
                 ${layer.id}`);
@@ -197,7 +208,7 @@ class GeometryLayer extends Layer {
      * All layer's 3D objects are removed from the scene and disposed from the video device.
      * @param {boolean} [clearCache=false] Whether to clear the layer cache or not
      */
-    delete(clearCache) {
+    delete(clearCache: boolean) {
         if (clearCache) {
             this.cache.clear();
         }

@@ -21,6 +21,27 @@ const boundingSphereCenter = new THREE.Vector3();
  * @extends GeometryLayer
  */
 class TiledGeometryLayer extends GeometryLayer {
+    readonly isTiledGeometryLayer = true;
+
+    protocol = 'tile';
+
+    disableSkirt: boolean;
+
+    sseSubdivisionThreshold: number;
+
+    minSubdivisionLevel: number;
+
+    maxSubdivisionLevel: number;
+
+    maxDeltaElevationLevel: number;
+
+    segments: number;
+
+    schemeTile: Extent[];
+
+    builder: TileBuilder<TileBuilderParams>;
+
+    info: InfoTiledGeometryLayer;
     /**
      * A layer extending the {@link GeometryLayer}, but with a tiling notion.
      *

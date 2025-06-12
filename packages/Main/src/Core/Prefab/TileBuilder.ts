@@ -72,9 +72,9 @@ export interface TileBuilder<SpecializedParams extends TileBuilderParams> {
     computeShareableExtent(extent: Extent): ShareableExtent;
 }
 
-export function newTileGeometry(
-    builder: TileBuilder<TileBuilderParams>,
-    params: TileBuilderParams,
+export function newTileGeometry<P extends TileBuilderParams>(
+    builder: TileBuilder<P>,
+    params: P,
 ) {
     const { shareableExtent, quaternion, position } =
         builder.computeShareableExtent(params.extent);

@@ -9,15 +9,16 @@ import { LRUCache } from 'lru-cache';
 
 import OBB from 'Renderer/OBB';
 
-type PartialTileBuilderParams =
-    Pick<TileBuilderParams, 'extent' | 'level'>
-    & Partial<TileBuilderParams>;
+type PartialTileBuilderParams<P extends TileBuilderParams> =
+    Partial<TileBuilderParams> &
+    Partial<Pick<P, keyof TileBuilderParams>>
+    & Pick<P, 'extent' | 'level'>;
 
-function defaultBuffers(
-    builder: TileBuilder<TileBuilderParams>,
-    params: PartialTileBuilderParams,
+function defaultBuffers<P extends TileBuilderParams>(
+    builder: TileBuilder<P>,
+    params: PartialTileGeometryParams<P>,
 ): GpuBufferAttributes {
-    const fullParams = {
+    const fullParams: P = {
         disableSkirt: false,
         hideSkirt: false,
         buildIndexAndUv_0: true,
@@ -48,7 +49,7 @@ function defaultBuffers(
     return bufferAttributes;
 }
 
-export class TileGeometry extends THREE.BufferGeometry {
+export class TileGeometry<P extends TileBuilderParams = TileBuilderParams> extends THREE.BufferGeometry {
     /** Oriented Bounding Box of the tile geometry. */
     public OBB: OBB | null;
     /** Ground area covered by this tile geometry. */
@@ -70,8 +71,8 @@ export class TileGeometry extends THREE.BufferGeometry {
     } | null;
 
     public constructor(
-        builder: TileBuilder<TileBuilderParams>,
-        params: TileBuilderParams,
+        builder: TileBuilder<P>,
+        params: P,
         bufferAttributes: GpuBufferAttributes = defaultBuffers(builder, params),
     ) {
         super();

@@ -163,9 +163,6 @@ class Layer extends THREE.EventDispatcher {
 
         this._promises.push(this.source.whenReady);
 
-        /**
-         * @type {Cache}
-         */
         this.cache = new LRUCache({
             max: 500,
             ...(cacheLifeTime !== Infinity && { ttl: cacheLifeTime }),

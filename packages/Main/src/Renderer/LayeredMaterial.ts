@@ -18,7 +18,7 @@ const bitSh = new THREE.Vector4(
     UnpackDownscale / (256.0 * 256.0 * 256.0),
 );
 
-export function unpack1K(color: THREE.Vector4Like, factor: number): number {
+export function unpack1K(color: THREE.Vector4Like, factor?: number): number {
     return factor ? bitSh.dot(color) * factor : bitSh.dot(color);
 }
 

@@ -5,11 +5,27 @@ import { newTileGeometry } from 'Core/Prefab/TileBuilder';
 import ReferLayerProperties from 'Layer/ReferencingLayerProperties';
 import { geoidLayerIsVisible } from 'Layer/GeoidLayer';
 
+import type { Extent } from '@itowns/geographic';
+import type { GlobeTileBuilder } from 'Core/Prefab/Globe/GlobeTileBuilder';
+import type { LayeredMaterialParameters } from 'Renderer/LayeredMaterial';
+
 const dimensions = new THREE.Vector2();
 
-function setTileFromTiledLayer(tile, tileLayer) {
+interface TileLayerLike {
+    isGlobeLayer: true | undefined;
+    diffuse: THREE.Color;
+    showOutline: boolean;
+    builder: GlobeTileBuilder;
+    tileMatrixSets: string[];
+    segments?: number;
+    disableSkirt?: boolean;
+    hideSkirt?: boolean;
+    materialOptions?: LayeredMaterialParameters;
+}
+
+function setTileFromTiledLayer(tile: TileMesh, tileLayer: TileLayerLike) {
     if (tileLayer.diffuse) {
-        tile.material.diffuse = tileLayer.diffuse;
+        tile.material.setUniform('diffuse', tileLayer.diffuse);
     }
 
     if (__DEBUG__) {
@@ -32,7 +48,7 @@ function setTileFromTiledLayer(tile, tileLayer) {
 }
 
 export default {
-    convert(requester, extent, layer) {
+    convert(requester: TileMesh, extent: Extent, layer: TileLayerLike) {
         const builder = layer.builder;
         const parent = requester;
         const level = (parent !== undefined) ? (parent.level + 1) : 0;

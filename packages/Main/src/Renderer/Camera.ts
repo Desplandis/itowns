@@ -25,7 +25,7 @@ const ndcBox3 = new THREE.Box3(
     new THREE.Vector3(1, 1, 1),
 );
 
-function updatePreSse(camera, height, fov) {
+function updatePreSse(camera: Camera, height: number, fov: number) {
     // sse = projected geometric error on screen plane from distance
     // We're using an approximation, assuming that the geometric error of all
     // objects is perpendicular to the camera view vector (= we always compute
@@ -64,7 +64,7 @@ function updatePreSse(camera, height, fov) {
     //                  = this.height / 2.0 * Math.tan(verticalFOV * 0.5)
     //                  = verticalPreSSE
 
-    if (camera.camera3D.isOrthographicCamera) {
+    if ('isOrthographicCamera' in camera.camera3D) {
         camera._preSSE = height;
     } else {
         const verticalFOV = THREE.MathUtils.degToRad(fov);
@@ -82,6 +82,12 @@ function updatePreSse(camera, height, fov) {
  * @property    {number}    _preSSE         The precomputed constant part of the screen space error.
  */
 class Camera {
+    crs: string;
+    camera3D: THREE.PerspectiveCamera | THREE.OrthographicCamera;
+    width: number;
+    height: number;
+    _preSSE: number;
+
     #_viewMatrixNeedsUpdate = true;
     #_viewMatrix = new THREE.Matrix4();
 
@@ -98,14 +104,10 @@ class Camera {
         * CAMERA_TYPE}.
      * @constructor
      */
-    constructor(crs, width, height, options = {}) {
+    constructor(crs: string, width: number, height: number, options: { cameraThree: THREE.Camera } | { type?: number } = {}) {
         this.crs = crs;
 
-        if (options.isCamera) {
-            console.warn('options.camera parameter is deprecated. Use options.camera.cameraThree to place a custom ' +
-                'camera as a parameter. See the documentation of Camera.');
-            this.camera3D = options;
-        } else if (options.cameraThree) {
+        if (options.cameraThree) {
             this.camera3D = options.cameraThree;
         } else {
             switch (options.type) {
@@ -118,7 +120,6 @@ class Camera {
                     break;
             }
         }
-        this.camera3D.aspect = this.camera3D.aspect ?? 1;
 
         this.width = width;
         this.height = height;
@@ -126,7 +127,8 @@ class Camera {
 
         this._preSSE = Infinity;
 
-        if (this.camera3D.isPerspectiveCamera) {
+        if ('isPerspectiveCamera' in this.camera3D) {
+            this.camera3D.aspect = this.camera3D.aspect ?? 1;
             let fov = this.camera3D.fov;
             Object.defineProperty(this.camera3D, 'fov', {
                 get: () => fov,
@@ -144,19 +146,19 @@ class Camera {
      * @param {number} width The width to resize the camera to. Must be strictly positive, won't resize otherwise.
      * @param {number} height The height to resize the camera to. Must be strictly positive, won't resize otherwise.
      */
-    resize(width, height) {
+    resize(width: number, height: number) {
         if (!width || width <= 0 || !height || height <= 0) {
             console.warn(`Trying to resize the Camera with invalid height (${height}) or width (${width}). Skipping resize.`);
             return;
         }
         const ratio = width / height;
         if (this.camera3D.aspect !== ratio) {
-            if (this.camera3D.isOrthographicCamera) {
+            if ('isOrthographicCamera' in this.camera3D) {
                 this.camera3D.zoom *= this.width / width;
                 const halfH = this.camera3D.top * this.camera3D.aspect / ratio;
                 this.camera3D.bottom = -halfH;
                 this.camera3D.top = halfH;
-            } else if (this.camera3D.isPerspectiveCamera) {
+            } else if ('isPerspectiveCamera' in this.camera3D) {
                 this.camera3D.fov = 2 * THREE.MathUtils.radToDeg(Math.atan(
                     (height / this.height) * Math.tan(THREE.MathUtils.degToRad(this.camera3D.fov) / 2),
                 ));
@@ -187,7 +189,7 @@ class Camera {
      *
      * @return  {Coordinates}   Coordinates object holding camera's position.
      */
-    position(crs) {
+    position(crs: string) {
         return new Coordinates(this.crs)
             .setFromVector3(this.camera3D.position)
             .as(crs || this.crs);
@@ -199,15 +201,15 @@ class Camera {
      *
      * @param   {Coordinates}   position    The new position of the camera.
      */
-    setPosition(position) {
+    setPosition(position: Coordinates) {
         this.camera3D.position.copy(position.as(this.crs));
     }
 
-    isBox3Visible(box3, matrixWorld) {
+    isBox3Visible(box3: THREE.Box3, matrixWorld: THREE.Matrix4) {
         return this.box3SizeOnScreen(box3, matrixWorld).intersectsBox(ndcBox3);
     }
 
-    isSphereVisible(sphere, matrixWorld) {
+    isSphereVisible(sphere: THREE.Sphere, matrixWorld: THREE.Matrix4) {
         if (this.#_viewMatrixNeedsUpdate) {
             // update visibility testing matrix
             this.#_viewMatrix.multiplyMatrices(this.camera3D.projectionMatrix, this.camera3D.matrixWorldInverse);
@@ -222,7 +224,7 @@ class Camera {
         return tmp.frustum.intersectsSphere(sphere);
     }
 
-    box3SizeOnScreen(box3, matrixWorld) {
+    box3SizeOnScreen(box3: THREE.Box3, matrixWorld: THREE.Matrix4) {
         const pts = projectBox3PointsInCameraSpace(this, box3, matrixWorld);
 
         // All points are in front of the near plane -> box3 is invisible

@@ -1,7 +1,10 @@
 import Layer from 'Layer/Layer';
 import LayerUpdateState from 'Layer/LayerUpdateState';
 
-
+/**
+ * @param {TiledGeometryLayer} tilelayer
+ * @returns {boolean}
+ */
 export function geoidLayerIsVisible(tilelayer) {
     return tilelayer?.attachedLayers.filter(l => l.isGeoidLayer)[0]?.visible;
 }
