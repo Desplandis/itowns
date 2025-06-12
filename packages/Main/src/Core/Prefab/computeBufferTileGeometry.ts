@@ -1,5 +1,36 @@
-import type { TileBuilder, TileBuilderParams } from 'Core/Prefab/TileBuilder';
 import * as THREE from 'three';
+
+import type { Coordinates, Extent } from '@itowns/geographic';
+
+export interface TileBuilderParams {
+    /** Whether to build the skirt. */
+    disableSkirt: boolean;
+    /** Number of segments (edge loops) inside tiles. */
+    segments: number;
+    // TODO: Move this out of the interface
+    /** Buffer for projected points. */
+    coordinates: Coordinates;
+    extent: Extent;
+    center: THREE.Vector3;
+}
+
+export interface TileBuilder<SpecializedParams extends TileBuilderParams> {
+    /** Convert builder-agnostic params to specialized ones. */
+    prepare(params: TileBuilderParams): SpecializedParams;
+    /**
+     * Computes final offset of the second texture set.
+     * Only relevant in the case of more than one texture sets.
+     */
+    computeExtraOffset?: (params: SpecializedParams) => number;
+    /** Converts an x/y tile-space position to its equivalent in 3D space. */
+    vertexPosition(coordinates: Coordinates): THREE.Vector3;
+    /** Gets the geodesic normal of the last processed vertex. */
+    vertexNormal(): THREE.Vector3;
+    /** Project horizontal texture coordinate to world space. */
+    uProject(u: number, extent: Extent): number;
+    /** Project vertical texture coordinate to world space. */
+    vProject(v: number, extent: Extent): number;
+}
 
 export function getBufferIndexSize(segments: number, noSkirt: boolean): number {
     const triangles = (segments) * (segments) * 2
@@ -48,7 +79,7 @@ type BufferCache = {
 function allocateIndexBuffer(
     nVertex: number,
     nSeg: number,
-    params: TileBuilderParams,
+    params: { disableSkirt: boolean },
     cache?: BufferCache['index'],
 ): { index: IndexArray, skirt: IndexArray } {
     const indexBufferSize = getBufferIndexSize(nSeg, params.disableSkirt);
@@ -79,10 +110,10 @@ function allocateIndexBuffer(
     };
 }
 
-function allocateBuffers(
+function allocateBuffers<P extends TileBuilderParams>(
     nVertex: number,
     nSeg: number,
-    builder: TileBuilder<TileBuilderParams>,
+    builder: TileBuilder<P>,
     params: TileBuilderParams,
     cache?: BufferCache,
 ): BuffersAndSkirt {
@@ -135,9 +166,9 @@ type ComputeUvs =
 
 /** Compute buffers describing a tile according to a builder and its params. */
 // TODO: Split this even further into subfunctions
-export function computeBuffers(
-    builder: TileBuilder<TileBuilderParams>,
-    params: TileBuilderParams,
+export function computeBuffers<P extends TileBuilderParams>(
+    builder: TileBuilder<P>,
+    params: P,
     cache?: BufferCache,
 ): Buffers {
     //     n seg, n+1 vert    + <- skirt, n verts per side
@@ -171,16 +202,16 @@ export function computeBuffers(
     const computeUvs: ComputeUvs =
         [cache === undefined ? computeUv0 : () => { }];
 
-    params = builder.prepare(params);
+    const preparedParams = builder.prepare(params);
 
     for (let y = 0; y <= nSeg; y++) {
         const v = y / nSeg;
 
-        params.coordinates.y = builder.vProject(v, params.extent);
+        preparedParams.coordinates.y = builder.vProject(v, preparedParams.extent);
 
         if (builder.computeExtraOffset !== undefined) {
             computeUvs[1] = initComputeUv1(
-                builder.computeExtraOffset(params) as number,
+                builder.computeExtraOffset(preparedParams),
             );
         }
 
@@ -188,19 +219,19 @@ export function computeBuffers(
             const u = x / nSeg;
             const id_m3 = (y * nVertex + x) * 3;
 
-            params.coordinates.x = builder.uProject(u, params.extent);
+            preparedParams.coordinates.x = builder.uProject(u, preparedParams.extent);
 
-            const vertex = builder.vertexPosition(params.coordinates);
+            const vertex = builder.vertexPosition(preparedParams.coordinates);
             const normal = builder.vertexNormal();
 
             // move geometry to center world
-            vertex.sub(params.center);
+            vertex.sub(preparedParams.center);
 
             // align normal to z axis
             // HACK: this check style is not great
-            if ('quatNormalToZ' in params) {
+            if ('quatNormalToZ' in preparedParams) {
                 const quat =
-                    params.quatNormalToZ as THREE.Quaternion;
+                    preparedParams.quatNormalToZ as THREE.Quaternion;
                 vertex.applyQuaternion(quat);
                 normal.applyQuaternion(quat);
             }
@@ -217,7 +248,7 @@ export function computeBuffers(
     }
 
     // Fill skirt index buffer
-    if (cache === undefined && !params.disableSkirt) {
+    if (cache === undefined && !preparedParams.disableSkirt) {
         for (let x = 0; x < nVertex; x++) {
             //   -------->
             //   0---1---2
@@ -278,7 +309,7 @@ export function computeBuffers(
     // INFO: The size of the skirt is now a ratio of the size of the tile.
     // To be perfect it should depend on the real elevation delta but too heavy
     // to compute
-    if (!params.disableSkirt) {
+    if (!preparedParams.disableSkirt) {
         // We compute the actual size of tile segment to use later for
         // the skirt.
         const segmentSize = new THREE.Vector3()

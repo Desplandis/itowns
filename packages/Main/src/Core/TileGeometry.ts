@@ -2,20 +2,37 @@ import * as THREE from 'three';
 
 import { computeBuffers, getBufferIndexSize }
     from 'Core/Prefab/computeBufferTileGeometry';
-import { GpuBufferAttributes, TileBuilder, TileBuilderParams }
+import { GpuBufferAttributes }
     from 'Core/Prefab/TileBuilder';
 import { Coordinates, Extent } from '@itowns/geographic';
 import { LRUCache } from 'lru-cache';
 
 import OBB from 'Renderer/OBB';
+import { GlobeTileBuilder } from './Prefab/Globe/GlobeTileBuilder';
 
-type PartialTileBuilderParams =
-    Pick<TileBuilderParams, 'extent' | 'level'>
-    & Partial<TileBuilderParams>;
+import type {
+    TileBuilderParams as TParams,
+    TileBuilder as TBuilder,
+} from 'Core/Prefab/computeBufferTileGeometry';
 
-function defaultBuffers(
-    builder: TileBuilder<TileBuilderParams>,
-    params: PartialTileBuilderParams,
+export interface TileBuilder<P extends TParams> extends TBuilder<P> {
+    center(extent: Extent): THREE.Vector3;
+    crs: string;
+}
+
+export interface TileBuilderParams extends TParams {
+    /** Whether to render the skirt. */
+    hideSkirt: boolean;
+}
+
+function defaultBuffers<P extends { extent: Extent }>(
+    builder: TileBuilder<P & {
+        disableSkirt: boolean,
+        segments: number,
+        coordinates: Coordinates,
+        center: THREE.Vector3,
+    }>,
+    params: P,
 ): GpuBufferAttributes {
     const fullParams = {
         disableSkirt: false,
@@ -23,7 +40,7 @@ function defaultBuffers(
         buildIndexAndUv_0: true,
         segments: 16,
         coordinates: new Coordinates(builder.crs),
-        center: builder.center(params.extent!).clone(),
+        center: builder.center(params.extent).clone(),
         ...params,
     };
 
@@ -48,7 +65,13 @@ function defaultBuffers(
     return bufferAttributes;
 }
 
-export class TileGeometry extends THREE.BufferGeometry {
+try {
+const builder = new GlobeTileBuilder({ uvCount: 9 });
+const params = {} as any;
+const x = defaultBuffers(builder, params);
+} catch (e) {}
+
+export class TileGeometry<P extends TileBuilderParams = TileBuilderParams> extends THREE.BufferGeometry {
     /** Oriented Bounding Box of the tile geometry. */
     public OBB: OBB | null;
     /** Ground area covered by this tile geometry. */
@@ -70,8 +93,8 @@ export class TileGeometry extends THREE.BufferGeometry {
     } | null;
 
     public constructor(
-        builder: TileBuilder<TileBuilderParams>,
-        params: TileBuilderParams,
+        builder: TileBuilder<P>,
+        params: P,
         bufferAttributes: GpuBufferAttributes = defaultBuffers(builder, params),
     ) {
         super();
