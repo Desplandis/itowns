@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import Capabilities from 'Core/System/Capabilities';
+import { getMaxTextureUnitsCount } from 'Core/System/Capabilities';
 import ShaderUtils from 'Renderer/Shader/ShaderUtils';
 import textureVS from './Shader/ProjectiveTextureVS.glsl';
 import textureFS from './Shader/ProjectiveTextureFS.glsl';
@@ -71,7 +71,7 @@ class OrientedImageMaterial extends THREE.ShaderMaterial {
         this.defines.ORIENTED_IMAGES_COUNT = options.OrientedImagesCount ?? cameras.length;
 
         // verify that number of textures doesn't exceed GPU capabilities
-        const maxTexturesUnits = Capabilities.getMaxTextureUnitsCount();
+        const maxTexturesUnits = getMaxTextureUnitsCount();
         if (this.defines.ORIENTED_IMAGES_COUNT > maxTexturesUnits) {
             console.warn(`OrientedImageMaterial: Can't project ${cameras.length} textures, because it's more than GPU capabilities maximum texture units (${maxTexturesUnits})`);
 

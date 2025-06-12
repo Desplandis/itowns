@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import C3DTBatchTable from 'Core/3DTiles/C3DTBatchTable';
-import Capabilities from 'Core/System/Capabilities';
+import { isLogDepthBufferSupported } from 'Core/System/Capabilities';
 import { MeshBasicMaterial } from 'three';
 import disposeThreeMaterial from 'Utils/ThreeUtils';
 import shaderUtils from 'Renderer/Shader/ShaderUtils';
@@ -162,7 +162,7 @@ export default {
                             mesh.material = new MeshBasicMaterial();
                         }
                         disposeThreeMaterial(oldMat);
-                    } else if (Capabilities.isLogDepthBufferSupported()
+                    } else if (isLogDepthBufferSupported()
                         && mesh.material.isRawShaderMaterial
                         && !options.doNotPatchMaterial) {
                         shaderUtils.patchMaterialForLogDepthSupport(mesh.material);
@@ -179,7 +179,7 @@ export default {
 
                 transformToZUp(gltf.scene, options.gltfUpAxis);
 
-                const shouldBePatchedForLogDepthSupport = Capabilities.isLogDepthBufferSupported() && !options.doNotPatchMaterial;
+                const shouldBePatchedForLogDepthSupport = isLogDepthBufferSupported() && !options.doNotPatchMaterial;
                 if (options.frustumCulling === false || options.overrideMaterials || shouldBePatchedForLogDepthSupport || options.layer) {
                     gltf.scene.traverse(init_mesh);
                 }

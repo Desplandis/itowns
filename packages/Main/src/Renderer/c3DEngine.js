@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import Capabilities from 'Core/System/Capabilities';
+import { isLogDepthBufferSupported, updateCapabilities } from 'Core/System/Capabilities';
 import { unpack1K } from 'Renderer/LayeredMaterial';
 import Label2DRenderer from 'Renderer/Label2DRenderer';
 import { deprecatedC3DEngineWebGLOptions } from 'Core/Deprecated/Undeprecator';
@@ -110,7 +110,7 @@ class c3DEngine {
             this.renderer.domElement.tabIndex = -1;
         }
 
-        Capabilities.updateCapabilities(this.renderer);
+        updateCapabilities(this.renderer);
 
         this.renderer.setClearColor(0x030508);
         this.renderer.autoClear = false;
@@ -229,7 +229,7 @@ class c3DEngine {
     depthBufferRGBAValueToOrthoZ(depthBufferRGBA, camera) {
         depthRGBA.fromArray(depthBufferRGBA).divideScalar(255.0);
 
-        if (Capabilities.isLogDepthBufferSupported() && camera.type == 'PerspectiveCamera') {
+        if (isLogDepthBufferSupported() && camera.type == 'PerspectiveCamera') {
             const gl_FragDepthEXT = unpack1K(depthRGBA);
             const logDepthBufFC = 2.0 / (Math.log(camera.far + 1.0) / Math.LN2);
             // invert function : gl_FragDepthEXT = log2(vFragDepth) * logDepthBufFC * 0.5;

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import TileVS from 'Renderer/Shader/TileVS.glsl';
 import TileFS from 'Renderer/Shader/TileFS.glsl';
 import ShaderUtils from 'Renderer/Shader/ShaderUtils';
-import Capabilities from 'Core/System/Capabilities';
+import { getMaxTextureUnitsCount } from 'Core/System/Capabilities';
 import RenderMode from 'Renderer/RenderMode';
 import { RasterTile, RasterElevationTile, RasterColorTile } from './RasterTile';
 
@@ -28,7 +28,7 @@ const maxSamplersColorCount = 15;
 const samplersElevationCount = 1;
 
 export function getMaxColorSamplerUnitsCount(): number {
-    const maxSamplerUnitsCount = Capabilities.getMaxTextureUnitsCount();
+    const maxSamplerUnitsCount = getMaxTextureUnitsCount();
     return Math.min(
         maxSamplerUnitsCount - samplersElevationCount,
         maxSamplersColorCount,

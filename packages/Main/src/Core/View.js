@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CRS, Coordinates } from '@itowns/geographic';
 import Camera from 'Renderer/Camera';
 import MainLoop, { MAIN_LOOP_EVENTS, RENDERING_PAUSED } from 'Core/MainLoop';
-import Capabilities from 'Core/System/Capabilities';
+import { isLogDepthBufferSupported } from 'Core/System/Capabilities';
 import { COLOR_LAYERS_ORDER_CHANGED } from 'Renderer/ColorLayersOrdering';
 import c3DEngine from 'Renderer/c3DEngine';
 import RenderMode from 'Renderer/RenderMode';
@@ -1040,7 +1040,7 @@ class View extends THREE.EventDispatcher {
         screen.x = (mouse.x / dim.x) * 2 - 1;
         screen.y = -(mouse.y / dim.y) * 2 + 1;
 
-        if (Capabilities.isLogDepthBufferSupported() && this.camera3D.type == 'PerspectiveCamera') {
+        if (isLogDepthBufferSupported() && this.camera3D.type == 'PerspectiveCamera') {
             // TODO: solve this part with gl_FragCoord_Z and unproject
             // Origin
             ray.origin.copy(this.camera3D.position);
