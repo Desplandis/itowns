@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import assert from 'assert';
 import GlobeView from 'Core/Prefab/GlobeView';
 import ObjectRemovalHelper from 'Process/ObjectRemovalHelper';

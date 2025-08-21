@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import { TileGeometry } from 'Core/TileGeometry';
 import { LRUCache } from 'lru-cache';
 import { computeBuffers } from 'Core/Prefab/computeBufferTileGeometry';

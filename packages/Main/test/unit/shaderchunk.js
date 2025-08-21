@@ -1,5 +1,6 @@
 import assert from 'assert';
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import ShaderChunk from 'Renderer/Shader/ShaderChunk';
 
 describe('ShaderChunk', function () {

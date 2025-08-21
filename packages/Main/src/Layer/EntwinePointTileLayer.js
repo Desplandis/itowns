@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import EntwinePointTileNode from 'Core/EntwinePointTileNode';
 import PointCloudLayer from 'Layer/PointCloudLayer';
 import { Extent } from '@itowns/geographic';

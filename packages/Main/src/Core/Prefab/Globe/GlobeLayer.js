@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import TiledGeometryLayer from 'Layer/TiledGeometryLayer';
 import { ellipsoidSizes } from '@itowns/geographic';
 import { globalExtentTMS, schemeTiles } from 'Core/Tile/TileGrid';

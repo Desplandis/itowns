@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import proj4 from 'proj4';
 import Coordinates from './Coordinates';
 

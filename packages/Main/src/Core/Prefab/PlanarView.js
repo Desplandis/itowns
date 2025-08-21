@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 
 import View from 'Core/View';
 import CameraUtils from 'Utils/CameraUtils';

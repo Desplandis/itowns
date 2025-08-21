@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import PointsVS from 'Renderer/Shader/PointsVS.glsl';
 import PointsFS from 'Renderer/Shader/PointsFS.glsl';
 import CommonMaterial from 'Renderer/CommonMaterial';
@@ -209,11 +210,11 @@ class PointsMaterial extends THREE.ShaderMaterial {
             precision: 'highp',
             vertexColors: true,
         });
-        this.uniforms = THREE.UniformsUtils.merge([
-            // THREE.PointsMaterial uniforms
-            THREE.UniformsLib.points,
-            THREE.UniformsLib.fog,
-        ]);
+        // this.uniforms = THREE.UniformsUtils.merge([
+        //     // THREE.PointsMaterial uniforms
+        //     THREE.UniformsLib.points,
+        //     THREE.UniformsLib.fog,
+        // ]);
         this.vertexShader = PointsVS;
         this.fragmentShader = PointsFS;
 

@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 
 class OBBHelper extends THREE.Box3Helper {
     constructor(OBB, text, color) {

@@ -19,6 +19,35 @@ function isFirefox() {
     return navigator && navigator.userAgent && navigator.userAgent.toLowerCase().includes('firefox');
 }
 
+
+async function getGPUInfo() {
+    if (!navigator.gpu) {
+        console.error('WebGPU non supporté sur ce navigateur.');
+        return;
+    }
+
+    // Récupérer l'adaptateur GPU
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) {
+        console.error('Aucun adaptateur GPU disponible.');
+        return;
+    }
+
+    // Récupérer les limites et les fonctionnalités supportées
+    console.log('Limites du GPU:', adapter.limits);
+    console.log('Fonctionnalités supportées:', adapter.features);
+
+    maxTexturesUnits = adapter.limits.maxSampledTexturesPerShaderStage;
+    maxTextureSize = adapter.limits.maxTextureDimension2D;
+
+    // Récupérer les informations sur l'adaptateur
+    // const info = adapter.requestDevice().then((device) => {
+    //     console.log('Device label:', device.label);
+    // });
+
+    return adapter;
+}
+
 export default {
     isLogDepthBufferSupported() {
         return logDepthBufferSupported;
@@ -31,43 +60,50 @@ export default {
         return maxTextureSize;
     },
     updateCapabilities(renderer) {
-        const gl = renderer.getContext();
-        maxTexturesUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
-        maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+        // renderer.
+        if (renderer.isWebGPURenderer) {
+            logDepthBufferSupported = renderer.logarithmicDepthBuffer;
 
-        const program = gl.createProgram();
-        const glVertexShader = _WebGLShader(renderer, gl.VERTEX_SHADER, SampleTestVS);
+            getGPUInfo();
+        } else {
+            const gl = renderer.getContext();
+            maxTexturesUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
+            maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
 
-        let fragmentShader = `#define SAMPLE ${maxTexturesUnits}\n`;
-        fragmentShader += SampleTestFS;
+            const program = gl.createProgram();
+            const glVertexShader = _WebGLShader(renderer, gl.VERTEX_SHADER, SampleTestVS);
 
-        const glFragmentShader = _WebGLShader(renderer, gl.FRAGMENT_SHADER, fragmentShader);
+            let fragmentShader = `#define SAMPLE ${maxTexturesUnits}\n`;
+            fragmentShader += SampleTestFS;
 
-        gl.attachShader(program, glVertexShader);
-        gl.attachShader(program, glFragmentShader);
-        gl.linkProgram(program);
+            const glFragmentShader = _WebGLShader(renderer, gl.FRAGMENT_SHADER, fragmentShader);
 
-        if (gl.getProgramParameter(program, gl.LINK_STATUS) === false) {
-            if (maxTexturesUnits > 16) {
-                const info = gl.getProgramInfoLog(program);
-                // eslint-disable-next-line no-console
-                console.warn(`${info}: using a maximum of 16 texture units instead of the reported value (${maxTexturesUnits})`);
-                if (isFirefox()) {
+            gl.attachShader(program, glVertexShader);
+            gl.attachShader(program, glFragmentShader);
+            gl.linkProgram(program);
+
+            if (gl.getProgramParameter(program, gl.LINK_STATUS) === false) {
+                if (maxTexturesUnits > 16) {
+                    const info = gl.getProgramInfoLog(program);
                     // eslint-disable-next-line no-console
-                    console.warn(`It can come from a Mesa/Firefox bug;
-                        the shader compiles to an error when using more than 16 sampler uniforms,
-                        see https://bugzilla.mozilla.org/show_bug.cgi?id=777028`);
+                    console.warn(`${info}: using a maximum of 16 texture units instead of the reported value (${maxTexturesUnits})`);
+                    if (isFirefox()) {
+                        // eslint-disable-next-line no-console
+                        console.warn(`It can come from a Mesa/Firefox bug;
+                            the shader compiles to an error when using more than 16 sampler uniforms,
+                            see https://bugzilla.mozilla.org/show_bug.cgi?id=777028`);
+                    }
+                    maxTexturesUnits = 16;
+                } else {
+                    throw (new Error(`The GPU capabilities could not be determined accurately.
+                        Impossible to link a shader with the Maximum texture units ${maxTexturesUnits}`));
                 }
-                maxTexturesUnits = 16;
-            } else {
-                throw (new Error(`The GPU capabilities could not be determined accurately.
-                    Impossible to link a shader with the Maximum texture units ${maxTexturesUnits}`));
             }
-        }
 
-        gl.deleteProgram(program);
-        gl.deleteShader(glVertexShader);
-        gl.deleteShader(glFragmentShader);
-        logDepthBufferSupported = renderer.capabilities.logarithmicDepthBuffer;
+            gl.deleteProgram(program);
+            gl.deleteShader(glVertexShader);
+            gl.deleteShader(glFragmentShader);
+            logDepthBufferSupported = renderer.capabilities.logarithmicDepthBuffer;
+        }
     },
 };

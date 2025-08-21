@@ -5,7 +5,8 @@ import DEMUtils from 'Utils/DEMUtils';
 import VRControls from 'Controls/VRControls';
 
 import { Coordinates } from '@itowns/geographic';
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import Renderer from './bootstrap';
 
 

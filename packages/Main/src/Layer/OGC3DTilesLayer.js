@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import { TilesRenderer } from '3d-tiles-renderer';
 import {
     GLTFStructuralMetadataExtension,

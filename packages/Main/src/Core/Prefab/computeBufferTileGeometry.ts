@@ -1,5 +1,6 @@
 import type { TileBuilder, TileBuilderParams } from 'Core/Prefab/TileBuilder';
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 
 export function getBufferIndexSize(segments: number, noSkirt: boolean): number {
     const triangles = (segments) * (segments) * 2

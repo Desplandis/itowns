@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import ObjectRemovalHelper from 'Process/ObjectRemovalHelper';
 import { C3DTilesBoundingVolumeTypes } from 'Core/3DTiles/C3DTilesEnums';
 import { C3DTILES_LAYER_EVENTS } from '../Layer/C3DTilesLayer';

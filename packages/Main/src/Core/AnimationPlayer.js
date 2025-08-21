@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 
 const FRAMERATE = 60;
 const FRAME_DURATION = 1000 / FRAMERATE;

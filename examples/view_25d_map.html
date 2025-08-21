@@ -5,14 +5,14 @@
         <script type="importmap">
         {
             "imports": {
-                "itowns": "../dist/itowns.js",
+               "itowns": "../dist/itowns.js",
                 "debug": "../dist/debug.js",
                 "dat": "https://unpkg.com/dat.gui@0.7.9/build/dat.gui.module.js",
                 "GuiTools": "./jsm/GUI/GuiTools.js",
                 "LoadingScreen": "./jsm/GUI/LoadingScreen.js",
                 "itowns_widgets": "../dist/itowns_widgets.js",
-                "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+                "three": "https://unpkg.com/three@0.174.0/build/three.webgpu.js",
+                "three/webgpu": "https://unpkg.com/three@0.174.0/build/three.webgpu.js"
             }
         }
         </script>
@@ -59,28 +59,77 @@
             var menuGlobe;
             var d;
 
+            const posWorld = 5000;
+
             // Define geographic extent: CRS, min/max X, min/max Y
             extent = new itowns.Extent(
-                'EPSG:3946',
-                1837816.94334, 1847692.32501,
-                5170036.4587, 5178412.82698);
+                'EPSG:3857',
+                posWorld, posWorld + 5000,
+                posWorld, posWorld + 5000);
+
+                        extent = new itowns.Extent(
+                'EPSG:3857',
+                -20026376.39, 20026376.39,
+                -20048966.10, 20048966.10);
+
+            const center = extent.center().toVector3();
+
+            console.log('center', center);
 
             // `viewerDiv` will contain iTowns' rendering area (`<canvas>`)
             viewerDiv = document.getElementById('viewerDiv');
 
             // Instanciate PlanarView*
-            view = new itowns.PlanarView(viewerDiv, extent, { placement: { heading: 49.6, range: 6200, tilt: 17 } });
+            view = new itowns.PlanarView(viewerDiv, extent, { placement: { heading: 49.6, range: 62, tilt: 17 } });
             setupLoadingScreen(viewerDiv, view);
 
             // Add a WMS imagery source
-            var wmsImagerySource = new itowns.WMSSource({
-                extent: extent,
-                name: 'ortho_latest',
-                url: 'https://imagerie.data.grandlyon.com/wms/grandlyon',
-                version: '1.3.0',
-                crs: 'EPSG:3946',
-                format: 'image/jpeg',
+            var opensmSource = new itowns.TMSSource({
+                isInverted: true,
+                // eslint-disable-next-line no-template-curly-in-string
+                url: 'https://watercolormaps.collection.cooperhewitt.org/tile/watercolor/${z}/${x}/${y}.jpg',
+                networkOptions: { crossOrigin: 'anonymous' },
+                extent,
+                crs: 'EPSG:3857',
+                attribution: {
+                    name: 'OpenStreetMap',
+                    url: 'http://www.openstreetmap.org/',
+                },
             });
+
+            const di = new THREE.DirectionalLight(0xffffff, 1);
+            di.position.set(20, 20, 20).add(center);
+            di.target.position.set(center)
+            // di.lookAt(new THREE.Vector3(0, 0, 0).add(center));
+            di.castShadow = true;
+            di.shadow.mapSize.width = 1024; // default
+            di.shadow.mapSize.height = 1024; // default
+            di.shadow.camera.near = 0.5; // default
+            di.shadow.camera.far = 100; // default
+            const dim = 20;
+            di.shadow.camera.left = -dim;
+            di.shadow.camera.right = dim;
+            di.shadow.camera.top = dim;
+            di.shadow.camera.bottom = -dim;
+
+            di.shadow.radius = 0.;
+            di.shadow.bias = 0.01;
+            view.tileLayer.object3d.add(di);
+            di.updateMatrixWorld();
+
+            const b = new THREE.Mesh(
+                new THREE.BoxGeometry(1, 1, 10),
+                new THREE.MeshStandardMaterial({ color: 'red' }),
+            );
+
+            b.castShadow = true;
+            b.position.add(center)
+
+            view.tileLayer.object3d.add(b);
+
+            const helper = new THREE.CameraHelper( di.shadow.camera );
+            view.tileLayer.object3d.add( helper );
+
 
             // Add a WMS imagery layer
             var wmsImageryLayer = new itowns.ColorLayer('wms_imagery', {
@@ -88,7 +137,7 @@
                     type: itowns.STRATEGY_DICHOTOMY,
                     options: {},
                 },
-                source: wmsImagerySource,
+                source: opensmSource,
             });
 
             view.addLayer(wmsImageryLayer);
@@ -111,7 +160,7 @@
                 source: wmsElevationSource,
             });
 
-            view.addLayer(wmsElevationLayer);
+            // view.addLayer(wmsElevationLayer);
 
             var wfsCartoSource = new itowns.WFSSource({
                 url: 'https://data.geopf.fr/wfs/ows?',
@@ -139,7 +188,7 @@
                 style: wfsCartoStyle,
             });
 
-            view.addLayer(wfsCartoLayer);
+            // view.addLayer(wfsCartoLayer);
 
             // Add a scale :
             const scale = new itowns_widgets.Scale(view, {

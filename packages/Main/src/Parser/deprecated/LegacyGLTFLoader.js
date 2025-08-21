@@ -1,7 +1,8 @@
 /* eslint-disable */
 // LegacyGLTFLoader for loading gltf 1.0 files taken from THREE v110 because it was removed in THREE v111 and maintained
 // since
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 const threeExamples = {};
 /**
  * @author Rich Tibbett / https://github.com/richtr
@@ -819,7 +820,8 @@ threeExamples.LegacyGLTFLoader = ( function () {
 
     DeferredShaderMaterial.prototype.create = function () {
 
-        var uniforms = THREE.UniformsUtils.clone( this.params.uniforms );
+        // var uniforms = THREE.UniformsUtils.clone( this.params.uniforms );
+        var uniforms = { };
 
         for ( var uniformId in this.params.uniforms ) {
 

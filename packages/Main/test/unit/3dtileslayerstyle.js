@@ -1,5 +1,6 @@
 import assert from 'assert';
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import { Extent, CRS } from '@itowns/geographic';
 import PlanarView from 'Core/Prefab/PlanarView';
 import C3DTBatchTable from 'Core/3DTiles/C3DTBatchTable';

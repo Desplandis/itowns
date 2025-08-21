@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import { Coordinates, CRS, Extent } from '@itowns/geographic';
 import { getInfoTms, getCountTiles } from './TileGrid';
 

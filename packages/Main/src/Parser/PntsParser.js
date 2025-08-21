@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 
 import C3DTBatchTable from 'Core/3DTiles/C3DTBatchTable';
 

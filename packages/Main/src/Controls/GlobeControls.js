@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import AnimationPlayer from 'Core/AnimationPlayer';
 import { Coordinates, ellipsoidSizes } from '@itowns/geographic';
 import CameraUtils from 'Utils/CameraUtils';

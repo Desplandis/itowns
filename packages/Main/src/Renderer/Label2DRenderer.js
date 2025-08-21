@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import GlobeLayer from 'Core/Prefab/Globe/GlobeLayer';
 
 function isIntersectedOrOverlaped(a, b) {

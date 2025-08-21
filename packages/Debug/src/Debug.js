@@ -1,7 +1,8 @@
 import { CameraHelper, Color, Vector3 } from 'three';
 import { Coordinates } from '@itowns/geographic';
 import { MAIN_LOOP_EVENTS, OBB } from 'itowns';
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import ThreeStatsChart from './charts/ThreeStatsChart';
 import { backgroundChartDiv, color_blue } from './charts/ChartConfig';
 import OBBHelper from './OBBHelper';

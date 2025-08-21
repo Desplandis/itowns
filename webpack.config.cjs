@@ -155,6 +155,7 @@ module.exports = () => {
         },
         externals: {
             three: 'three',
+            'three/webgpu': 'three/webgpu',
         },
     };
 

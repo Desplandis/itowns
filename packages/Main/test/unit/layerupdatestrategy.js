@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import assert from 'assert';
 import TileMesh from 'Core/TileMesh';
 import { Extent } from '@itowns/geographic';

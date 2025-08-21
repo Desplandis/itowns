@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import C3DTBoundingVolume from './C3DTBoundingVolume';
 import { C3DTilesTypes } from './C3DTilesEnums';
 

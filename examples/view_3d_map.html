@@ -14,8 +14,8 @@
                 "GuiTools": "./jsm/GUI/GuiTools.js",
                 "LoadingScreen": "./jsm/GUI/LoadingScreen.js",
                 "itowns_widgets": "../dist/itowns_widgets.js",
-                "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+                "three": "https://unpkg.com/three@0.174.0/build/three.webgpu.js",
+                "three/webgpu": "https://unpkg.com/three@0.174.0/build/three.webgpu.js"
             }
         }
         </script>
@@ -31,7 +31,7 @@
 
             import GuiTools from 'GuiTools';
             import setupLoadingScreen from 'LoadingScreen';
-            import * as THREE from 'three';
+            import * as THREE from 'three/webgpu';
             import * as itowns from 'itowns';
             import * as debug from 'debug';
             import * as itowns_widgets from 'itowns_widgets';
@@ -42,7 +42,11 @@
             const placement = {
                 coord: new itowns.Coordinates('EPSG:4326', 2.351323, 48.856712),
                 range: 25000000,
+
             }
+
+            const center = placement.coord.as('EPSG:4978');
+            console.log('center', center);
 
             // `viewerDiv` will contain iTowns' rendering area (`<canvas>`)
             const viewerDiv = document.getElementById('viewerDiv');
@@ -54,6 +58,45 @@
             setupLoadingScreen(viewerDiv, view);
             const debugMenu = new GuiTools('menuDiv', view);
 
+            view.tileLayer.object3d.add(new THREE.AmbientLight(0xffffff, 0.1));
+
+            const dLight = new THREE.DirectionalLight(0xffffff, 1);
+            dLight.position.set(20, 20, 20).add(center);
+            // dLight.lookAt(center);
+
+            dLight.target.position.copy(center)
+            // dLight.target.translateX(50)
+            dLight.castShadow = true;
+            dLight.shadow.mapSize.width = 1024; // default
+            dLight.shadow.mapSize.height = 1024; // default
+            dLight.shadow.camera.near = 0.5; // default
+            dLight.shadow.camera.far = 100; // default
+            const dim = 20;
+            dLight.shadow.camera.left = -dim;
+            dLight.shadow.camera.right = dim;
+            dLight.shadow.camera.top = dim;
+            dLight.shadow.camera.bottom = -dim;
+
+            dLight.shadow.radius = 0.;
+            dLight.shadow.bias = 0.01;
+
+            const helperDL = new THREE.DirectionalLightHelper( dLight, 5 );
+            // view.tileLayer.object3d.add( helperDL );
+            view.tileLayer.object3d.add(dLight);
+            // di.updateMatrixWorld();
+
+            const b = new THREE.Mesh(
+                new THREE.BoxGeometry(1, 1, 10),
+                new THREE.MeshStandardMaterial({ color: 'red' }),
+            );
+
+            b.castShadow = true;
+            b.position.add(center)
+            b.lookAt(new THREE.Vector3(0, 0, 0));
+            view.tileLayer.object3d.add(b);
+
+            const helper = new THREE.CameraHelper( dLight.shadow.camera );
+            view.tileLayer.object3d.add( helper );
 
 
             // ---------- DISPLAY ORTHO-IMAGES : ----------
@@ -79,8 +122,8 @@
                     new itowns.ElevationLayer(config.id, config),
                 ).then(debugMenu.addLayerGUI.bind(debugMenu));
             }
-            itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addElevationLayerFromConfig);
-            itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addElevationLayerFromConfig);
+            // itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addElevationLayerFromConfig);
+            // itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addElevationLayerFromConfig);
 
 
             // ---------- ADD SOME WIDGETS : ----------
@@ -89,19 +132,19 @@
             const scale = new itowns_widgets.Scale(view, { position: 'bottom-right', translate: { x: -80 } });
 
             // ADD A MINIMAP :
-            const minimap = new itowns_widgets.Minimap(
-                view,
-                new itowns.ColorLayer('minimap', {
-                    source: new itowns.VectorTilesSource({
-                        style: "https://data.geopf.fr/annexes/ressources/vectorTiles/styles/PLAN.IGN/standard.json",
-                        // We don't display mountains and plot related data to ease visualisation
-                        filter: (layer) => !layer['source-layer'].includes('oro_')
-                            && !layer['source-layer'].includes('parcellaire'),
-                    }),
-                    addLabelLayer: { performance: true },
-                }),
-                { cursor: '+' },
-            );
+            // const minimap = new itowns_widgets.Minimap(
+            //     view,
+            //     new itowns.ColorLayer('minimap', {
+            //         source: new itowns.VectorTilesSource({
+            //             style: "https://data.geopf.fr/annexes/ressources/vectorTiles/styles/PLAN.IGN/standard.json",
+            //             // We don't display mountains and plot related data to ease visualisation
+            //             filter: (layer) => !layer['source-layer'].includes('oro_')
+            //                 && !layer['source-layer'].includes('parcellaire'),
+            //         }),
+            //         addLabelLayer: { performance: true },
+            //     }),
+            //     { cursor: '+' },
+            // );
 
             // ADD NAVIGATION TOOLS :
             const navigation = new itowns_widgets.Navigation(view, {
@@ -144,8 +187,8 @@
 
             // ---------- DISPLAY ATMOSPHERIC LIGHTING : ----------
 
-            const atmosphere = view.getLayerById('atmosphere');
-            atmosphere.setRealisticOn(!view.isDebugMode);
+            // const atmosphere = view.getLayerById('atmosphere');
+            // atmosphere.setRealisticOn(!view.isDebugMode);
 
 
 
@@ -164,7 +207,7 @@
             window.THREE = THREE;
             window.debugMenu = debugMenu;
             window.cRL = cRL;
-            window.minimap = minimap;
+            // window.minimap = minimap;
 
             window.navigation = navigation;
             window.searchbar = searchbar;

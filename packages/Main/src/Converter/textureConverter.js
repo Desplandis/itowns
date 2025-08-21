@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import Feature2Texture from 'Converter/Feature2Texture';
 import { Extent } from '@itowns/geographic';
 

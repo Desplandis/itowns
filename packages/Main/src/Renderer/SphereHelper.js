@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 
 function SphereHelper(radius) {
     THREE.Mesh.call(this);

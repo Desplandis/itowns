@@ -1,5 +1,6 @@
 import assert from 'assert';
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import GeometryLayer from 'Layer/GeometryLayer';
 import ColorLayer from 'Layer/ColorLayer';
 

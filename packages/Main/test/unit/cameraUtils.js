@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import assert from 'assert';
 import { Coordinates, Ellipsoid, Extent, CRS } from '@itowns/geographic';
 import CameraUtils from 'Utils/CameraUtils';

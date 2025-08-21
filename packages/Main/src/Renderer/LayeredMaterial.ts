@@ -1,4 +1,6 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
+import { texture, select, uv, mix, negate, add, Fn, If, trunc, uvec2, vec4, vec2, vec3, positionWorld, attribute, fract, range, hash, uniform, array } from 'three/tsl';
 import TileVS from 'Renderer/Shader/TileVS.glsl';
 import TileFS from 'Renderer/Shader/TileFS.glsl';
 import ShaderUtils from 'Renderer/Shader/ShaderUtils';
@@ -111,7 +113,8 @@ function updateLayersUniforms(
         ) {
             uOffsetScales[count] = tile.offsetScales[i];
             uTextures[count] = tile.textures[i];
-            uLayers[count] = tile;
+            // uLayers[count] = tile;
+            // console.log('tile', tile);
         }
     }
     if (count > max) {
@@ -234,7 +237,7 @@ function initModeDefines(
 }
 
 /** Material that handles the overlap of multiple raster tiles. */
-export class LayeredMaterial extends THREE.ShaderMaterial {
+export class LayeredMaterial extends THREE.MeshPhysicalNodeMaterial {
     private _visible = true;
 
     public colorTiles: RasterColorTile[];
@@ -248,7 +251,15 @@ export class LayeredMaterial extends THREE.ShaderMaterial {
     public override defines: LayeredMaterialDefines;
 
     constructor(options: LayeredMaterialParameters = {}, crsCount: number) {
-        super(options);
+        super({
+            color: new THREE.Color(1.0),
+            transparent: false,
+            // opacity: 0.85,
+            sheen: 1.0,
+            sheenRoughness: 0.5,
+            roughness: 0.5,
+            // sheenColor: new THREE.Color().setHex( API.sheenColor ),
+            });
 
         nbSamplers ??= [samplersElevationCount, getMaxColorSamplerUnitsCount()];
 
@@ -262,6 +273,31 @@ export class LayeredMaterial extends THREE.ShaderMaterial {
         fillInProp(defines, 'MODE', RenderMode.MODES.FINAL);
 
         fillInProp(defines, 'DEBUG', +__DEBUG__);
+
+        const uv0 = uv();
+
+        const uv_1 = attribute('uv_1', 'float').toConst();
+
+        this.dynColor = uniform(new THREE.Color().setHex(0x38849F)); // Default color, can be overridden by the color tiles
+
+        const colorb = new THREE.Color().setHex( 0x38849F );
+
+        const uvs = vec2(uv().x, fract(uv_1) ).toConst();
+        const backgroundColor = vec3(colorb.r, colorb.g, colorb.b);
+
+         this.colors = array( [
+            texture( new THREE.Texture(), uvs).rgb,
+            texture( new THREE.Texture(), uvs).rgb,
+            texture( new THREE.Texture(), uvs).rgb,
+        ] );
+
+        const colorFinal = vec3(select( uv_1.lessThan(3), this.colors.element(trunc(uv_1)), backgroundColor ));
+
+        this.roughnessNode = select( colorFinal.distance(backgroundColor).lessThan(0.1) , 0.25, 0.5 );
+
+        this.colorNode = vec4(colorFinal, 1.0);
+
+        this.uniforms = {};
 
         if (__DEBUG__) {
             const outlineColors = [new THREE.Color(1.0, 0.0, 0.0)];
@@ -278,13 +314,13 @@ export class LayeredMaterial extends THREE.ShaderMaterial {
 
         this.defines = defines;
 
-        this.fog = true; // receive the fog defined on the scene, if any
+        // this.fog = true; // receive the fog defined on the scene, if any
 
-        this.vertexShader = TileVS;
-        // three loop unrolling of ShaderMaterial only supports integer bounds,
-        // see https://github.com/mrdoob/three.js/issues/28020
-        fragmentShader[crsCount] ??= ShaderUtils.unrollLoops(TileFS, defines);
-        this.fragmentShader = fragmentShader[crsCount];
+        // this.vertexShader = TileVS;
+        // // three loop unrolling of ShaderMaterial only supports integer bounds,
+        // // see https://github.com/mrdoob/three.js/issues/28020
+        // fragmentShader[crsCount] ??= ShaderUtils.unrollLoops(TileFS, defines);
+        // this.fragmentShader = fragmentShader[crsCount];
 
         this.initUniforms({
             // Color uniforms
@@ -314,12 +350,12 @@ export class LayeredMaterial extends THREE.ShaderMaterial {
             minBorderDistance: -0.01,
         });
 
-        // LayeredMaterialLayers
+        // // LayeredMaterialLayers
         this.colorTiles = [];
         this.colorTileIds = [];
         this.layersNeedUpdate = false;
 
-        // elevation/color layer uniforms, to be updated using updateUniforms()
+        // // elevation/color layer uniforms, to be updated using updateUniforms()
         this.initUniforms({
             elevationLayers: new Array(nbSamplers[0])
                 .fill(defaultStructLayers.elevation),
@@ -336,8 +372,8 @@ export class LayeredMaterial extends THREE.ShaderMaterial {
             colorTextureCount: 0,
         });
 
-        // Can't do an ES6 getter/setter here because it would override the
-        // Material::visible property with accessors, which is not allowed.
+        // // Can't do an ES6 getter/setter here because it would override the
+        // // Material::visible property with accessors, which is not allowed.
         Object.defineProperty(this, 'visible', {
             // Knowing the visibility of a `LayeredMaterial` is useful. For
             // example in a `GlobeView`, if you zoom in, "parent" tiles seems

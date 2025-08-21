@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import ElevationLayer from 'Layer/ElevationLayer';
 import WMTSSource from 'Source/WMTSSource';
 import Fetcher from 'Provider/Fetcher';

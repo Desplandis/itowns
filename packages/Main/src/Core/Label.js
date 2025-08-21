@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import DEMUtils from 'Utils/DEMUtils';
 import { Coordinates } from '@itowns/geographic';
 

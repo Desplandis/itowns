@@ -1,3 +1,6 @@
+// import { texture, uv, uvec2, vec4, positionWorld, attribute, fract, range, hash } from 'three/tsl';
+// eslint-disable-next-line import/no-unresolved
+import { vec4, uniform, texture, mix } from 'three/tsl';
 import { chooseNextLevelToFetch } from 'Layer/LayerUpdateStrategy';
 import LayerUpdateState from 'Layer/LayerUpdateState';
 import handlingError from 'Process/handlerNodeError';
@@ -51,6 +54,8 @@ function computePitchs(textures, extentsDestination) {
 
 export function updateLayeredMaterialNodeImagery(context, layer, node, parent) {
     const material = node.material;
+    // material.outputNode = vec4(1.0, 0.0, 0.0, 1.0);
+
     if (!parent || !material) {
         return;
     }
@@ -146,6 +151,8 @@ export function updateLayeredMaterialNodeImagery(context, layer, node, parent) {
 
     return context.scheduler.execute(command).then(
         (results) => {
+            // material.dynColor.value.set(0.0, 1.0, 0.0, 1.0);
+            // console.log('material');
             // Does nothing if the layer has been removed while command was being or waiting to be executed
             if (!node.layerUpdateState[layer.id]) {
                 return;
@@ -156,88 +163,27 @@ export function updateLayeredMaterialNodeImagery(context, layer, node, parent) {
             const pitchs = computePitchs(textures, extentsDestination);
             nodeLayer.setTextures(textures, pitchs);
             node.layerUpdateState[layer.id].success();
+
+
+            if (textures[0]) {
+                material.colors.values[0].node.value = textures[0];
+                textures[0].needsUpdate = true;
+            }
+
+            if (textures[1]) {
+                material.colors.values[1].node.value = textures[1];
+                textures[1].needsUpdate = true;
+            }
+
+            if (textures[2]) {
+                material.colors.values[2].node.value = textures[2];
+                textures[2].needsUpdate = true;
+            }
         },
         err => handlingError(err, node, layer, targetLevel, context.view));
 }
 
-export function updateLayeredMaterialNodeElevation(context, layer, node, parent) {
-    const material = node.material;
-    if (!parent || !material) {
-        return;
-    }
-
-    // TODO: we need either
-    //  - compound or exclusive layers
-    //  - support for multiple elevation layers
-
-    // Elevation is currently handled differently from color layers.
-    // This is caused by a LayeredMaterial limitation: only 1 elevation texture
-    // can be used (where a tile can have N textures x M layers)
-    const extentsDestination = node.getExtentsByProjection(layer.crs);
-    const zoom = extentsDestination[0].zoom;
-    if (zoom > layer.zoom.max || zoom < layer.zoom.min) {
-        return;
-    }
-    // Init elevation layer, and inherit from parent if possible
-    let nodeLayer = material.getElevationTile();
-    if (!nodeLayer) {
-        nodeLayer = layer.setupRasterNode(node);
-    }
-
-    if (node.layerUpdateState[layer.id] === undefined) {
-        node.layerUpdateState[layer.id] = new LayerUpdateState();
-
-        const parentLayer = parent.material?.getTile(layer.id);
-        nodeLayer.initFromParent(parentLayer, extentsDestination);
-
-        if (nodeLayer.level >= layer.source.zoom.min) {
-            context.view.notifyChange(node, false);
-            return;
-        }
-    }
-
-    // Possible conditions to *not* update the elevation texture
-    if (layer.frozen ||
-        !material.visible ||
-        !node.layerUpdateState[layer.id].canTryUpdate()) {
-        return;
-    }
-
-    const failureParams = node.layerUpdateState[layer.id].failureParams;
-    const targetLevel = chooseNextLevelToFetch(layer.updateStrategy.type, node, extentsDestination[0].zoom, nodeLayer.level, layer, failureParams);
-
-    if (targetLevel <= nodeLayer.level || targetLevel > extentsDestination[0].zoom) {
-        node.layerUpdateState[layer.id].noMoreUpdatePossible();
-        return;
-    } else if (!layer.source.extentInsideLimit(node.extent, targetLevel)) {
-        node.layerUpdateState[layer.id].noData({ targetLevel });
-        context.view.notifyChange(node, false);
-        return;
-    }
-
-    const extentsSource = extentsDestination.map(e => e.tiledExtentParent(targetLevel));
-    node.layerUpdateState[layer.id].newTry();
-    const command = buildCommand(context.view, layer, extentsSource, extentsDestination, node);
-
-    return context.scheduler.execute(command).then(
-        (results) => {
-            // Does nothing if the layer has been removed while command was being or waiting to be executed
-            if (!node.layerUpdateState[layer.id]) {
-                return;
-            }
-
-            // Do not apply the new texture if its level is < than the current
-            // one.  This is only needed for elevation layers, because we may
-            // have several concurrent layers but we can only use one texture.
-            if (targetLevel <= nodeLayer.level) {
-                node.layerUpdateState[layer.id].noMoreUpdatePossible();
-                return;
-            }
-            const pitchs = computePitchs(results, extentsDestination);
-            nodeLayer.setTextures(results, pitchs);
-            node.layerUpdateState[layer.id].success();
-        },
-        err => handlingError(err, node, layer, targetLevel, context.view));
+export function updateLayeredMaterialNodeElevation(/* context, layer, node, parent */) {
 }
 
 export function removeLayeredMaterialNodeTile(tileId) {

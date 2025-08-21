@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import { View, GeometryLayer, C3DTilesBoundingVolumeTypes, PNTS_MODE, PNTS_SHAPE, PNTS_SIZE_MODE } from 'itowns';
 import GeometryDebug from './GeometryDebug';
 

@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import LegacyGLTFLoader from 'Parser/deprecated/LegacyGLTFLoader';
 // eslint-disable-next-line import/extensions, import/no-unresolved
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';

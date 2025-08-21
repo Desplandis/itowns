@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import TileMesh from 'Core/TileMesh';
 import { LayeredMaterial } from 'Renderer/LayeredMaterial';
 import { newTileGeometry } from 'Core/Prefab/TileBuilder';
@@ -12,9 +13,9 @@ function setTileFromTiledLayer(tile, tileLayer) {
         tile.material.diffuse = tileLayer.diffuse;
     }
 
-    if (__DEBUG__) {
-        tile.material.setUniform('showOutline', tileLayer.showOutline || false);
-    }
+    // if (__DEBUG__) {
+    //     tile.material.setUniform('showOutline', tileLayer.showOutline || false);
+    // }
 
     if (tileLayer.isGlobeLayer) {
         // Computes a point used for horizon culling.
@@ -73,7 +74,7 @@ export default {
                 tile.geoidHeight = parent.geoidHeight;
                 const geoidHeight = geoidLayerIsVisible(layer) ? tile.geoidHeight : 0;
                 tile.setBBoxZ({ min: parent.obb.z.min, max: parent.obb.z.max, geoidHeight });
-                tile.material.setUniform('geoidHeight', geoidHeight);
+                // tile.material.setUniform('geoidHeight', geoidHeight);
             }
 
             return tile;

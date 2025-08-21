@@ -1,5 +1,6 @@
 import assert from 'assert';
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import Label from 'Core/Label';
 import Style from 'Core/Style';
 import { FeatureCollection, FEATURE_TYPES } from 'Core/Feature';

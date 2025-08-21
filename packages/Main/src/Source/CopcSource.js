@@ -4,7 +4,8 @@ import { Extent } from '@itowns/geographic';
 import Fetcher from 'Provider/Fetcher';
 import LASParser from 'Parser/LASParser';
 import Source from 'Source/Source';
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 
 /**
  * @param {function(number, number):Promise<Uint8Array>} fetcher

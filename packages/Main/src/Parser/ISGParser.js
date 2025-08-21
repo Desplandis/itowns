@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import { Extent } from '@itowns/geographic';
 import GeoidGrid from 'Core/Geographic/GeoidGrid';
 import { getHeaderAttribute } from 'Parser/GDFParser';

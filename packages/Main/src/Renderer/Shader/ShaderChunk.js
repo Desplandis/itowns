@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import color_layers_pars_fragment from './Chunk/color_layers_pars_fragment.glsl';
 import elevation_pars_vertex from './Chunk/elevation_pars_vertex.glsl';
 import elevation_vertex from './Chunk/elevation_vertex.glsl';
@@ -134,6 +135,6 @@ class ShaderChunkManager {
     }
 }
 
-const ShaderChunk = new ShaderChunkManager(THREE.ShaderChunk, 'itowns/');
+const ShaderChunk = new ShaderChunkManager({}, 'itowns/');
 
 export default ShaderChunk;

@@ -4,7 +4,8 @@ import { DOMParser } from '@xmldom/xmldom';
 import threads from 'worker_threads';
 import 'webgl-mock';
 import { EnvHttpProxyAgent, setGlobalDispatcher } from 'undici';
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 
 setGlobalDispatcher(new EnvHttpProxyAgent());
 

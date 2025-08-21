@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import { Extent, Coordinates } from '@itowns/geographic';
 import StyleOptions from 'Core/StyleOptions';
 

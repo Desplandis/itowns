@@ -1,5 +1,6 @@
 import assert from 'assert';
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import disposeThreeMaterial from 'Utils/ThreeUtils';
 
 describe('ThreeJS Utils', function () {

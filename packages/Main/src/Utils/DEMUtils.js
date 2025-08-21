@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import { Coordinates } from '@itowns/geographic';
 import placeObjectOnGround from 'Utils/placeObjectOnGround';
 
@@ -88,20 +89,20 @@ export default {
 
 function tileAt(pt, tile) {
     if (tile.extent) {
-        if (!tile.extent.isPointInside(pt)) {
-            return undefined;
-        }
+        // if (!tile.extent.isPointInside(pt)) {
+        //     return undefined;
+        // }
 
-        for (let i = 0; i < tile.children.length; i++) {
-            const t = tileAt(pt, tile.children[i]);
-            if (t) {
-                return t;
-            }
-        }
-        const tileLayer = tile.material.getElevationTile();
-        if (tileLayer && tileLayer.level >= 0) {
-            return tile;
-        }
+        // for (let i = 0; i < tile.children.length; i++) {
+        //     const t = tileAt(pt, tile.children[i]);
+        //     if (t) {
+        //         return t;
+        //     }
+        // }
+        // const tileLayer = tile.material.getElevationTile();
+        // if (tileLayer && tileLayer.level >= 0) {
+        //     return tile;
+        // }
         return undefined;
     }
 }

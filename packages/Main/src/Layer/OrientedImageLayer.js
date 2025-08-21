@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import GeometryLayer from 'Layer/GeometryLayer';
 import OrientedImageMaterial from 'Renderer/OrientedImageMaterial';
 import GeoJsonParser from 'Parser/GeoJsonParser';

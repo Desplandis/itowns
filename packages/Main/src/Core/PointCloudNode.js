@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 
 const size = new THREE.Vector3();
 const position = new THREE.Vector3();

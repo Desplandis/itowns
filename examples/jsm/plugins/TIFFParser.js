@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import * as itowns from 'itowns';
 // eslint-disable-next-line import/no-unresolved
 import UTIF from 'UTIF';

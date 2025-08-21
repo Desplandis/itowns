@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import TWEEN from '@tweenjs/tween.js';
 import { MAIN_LOOP_EVENTS, GeometryLayer, ObjectRemovalHelper } from 'itowns';
 import TileObjectChart from './charts/TileObjectChart';

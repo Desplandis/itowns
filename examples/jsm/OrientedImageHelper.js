@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 
 // set object position to the coordinate
 // set object ENH orientation: X to the east, Y (green) to the north, Z (blue) look to the sky.

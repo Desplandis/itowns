@@ -4,7 +4,9 @@
  * Description: 3DEngine est l'interface avec le framework webGL.
  */
 
-import * as THREE from 'three';
+/* eslint-disable */
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import Capabilities from 'Core/System/Capabilities';
 import { unpack1K } from 'Renderer/LayeredMaterial';
 import Label2DRenderer from 'Renderer/Label2DRenderer';
@@ -56,11 +58,11 @@ class c3DEngine {
         this.fullSizeRenderTarget.depthTexture.type = THREE.UnsignedShortType;
 
         this.renderView = function _(view) {
-            this.renderer.clear();
+            this.renderer.clearAsync();
             if (view._camXR) {
-                this.renderer.render(view.scene, view._camXR);
+                this.renderer.renderAsync(view.scene, view._camXR);
             } else {
-                this.renderer.render(view.scene, view.camera3D);
+                this.renderer.renderAsync(view.scene, view.camera3D);
             }
             if (view.tileLayer) {
                 this.label2dRenderer.render(view.tileLayer.object3d, view.camera3D);
@@ -86,12 +88,15 @@ class c3DEngine {
             this.label2dRenderer.setSize(this.width, this.height);
             viewerDiv.appendChild(this.label2dRenderer.domElement);
 
-            this.renderer = renderer || new THREE.WebGLRenderer({
+            this.renderer = renderer || new THREE.WebGPURenderer({
                 canvas: document.createElement('canvas'),
                 antialias: options.antialias,
                 alpha: options.alpha,
                 logarithmicDepthBuffer: options.logarithmicDepthBuffer,
             });
+
+            this.renderer.shadowMap.enabled = true;
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
             this.renderer.domElement.style.position = 'relative';
             this.renderer.domElement.style.zIndex = 0;
             this.renderer.domElement.style.top = 0;
@@ -163,9 +168,9 @@ class c3DEngine {
 
         this.renderViewToRenderTarget(view, this.fullSizeRenderTarget, zone);
 
-        this.renderer.readRenderTargetPixels(
-            this.fullSizeRenderTarget,
-            zone.x, this.height - (zone.y + zone.height), zone.width, zone.height, zone.buffer);
+        // this.renderer.readRenderTargetPixels(
+        //     this.fullSizeRenderTarget,
+        //     zone.x, this.height - (zone.y + zone.height), zone.width, zone.height, zone.buffer);
 
         return zone.buffer;
     }
@@ -197,8 +202,8 @@ class c3DEngine {
         }
 
         this.renderer.setRenderTarget(target);
-        this.renderer.clear(true, true, false);
-        this.renderer.render(view.scene, view.camera.camera3D);
+        this.renderer.clearAsync(true, true, false);
+        this.renderer.renderAsync(view.scene, view.camera.camera3D);
         this.renderer.setRenderTarget(current);
 
         this.fullSizeRenderTarget.scissorTest = false;

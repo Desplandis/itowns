@@ -1,5 +1,6 @@
 import TWEEN from '@tweenjs/tween.js';
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import { MAIN_LOOP_EVENTS } from 'Core/MainLoop';
 import FirstPersonControls from 'Controls/FirstPersonControls';
 

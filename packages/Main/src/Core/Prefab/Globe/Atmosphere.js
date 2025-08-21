@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import GeometryLayer from 'Layer/GeometryLayer';
 import { Coordinates, ellipsoidSizes, CoordStars } from '@itowns/geographic';
 import Sky from './SkyShader';
@@ -131,10 +132,10 @@ class Atmosphere extends GeometryLayer {
     }
 
     update(context, layer, node) {
-        // update uniforms
-        node.material.setUniform('fogDistance', this.fog.distance);
-        node.material.setUniform('lightingEnabled', this.realisticAtmosphere.visible);
-        node.material.setUniform('lightPosition', this.realisticLightingPosition);
+        // // update uniforms
+        // node.material.setUniform('fogDistance', this.fog.distance);
+        // node.material.setUniform('lightingEnabled', this.realisticAtmosphere.visible);
+        // node.material.setUniform('lightPosition', this.realisticLightingPosition);
     }
 
     // eslint-disable-next-line no-unused-vars

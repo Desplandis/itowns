@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import LayerUpdateState from 'Layer/LayerUpdateState';
 import ObjectRemovalHelper from 'Process/ObjectRemovalHelper';
 import GeometryLayer from 'Layer/GeometryLayer';
@@ -473,9 +474,9 @@ class LabelLayer extends GeometryLayer {
                 // Necessary event listener, to remove any Label attached to
                 node.addEventListener('removed', () => this.removeNodeDomElement(node));
 
-                if (labelsNode.needsAltitude && node.material.getElevationTile()) {
-                    node.material.getElevationTile().addEventListener('rasterElevationLevelChanged', () => { labelsNode.needsUpdate = true; });
-                }
+                // if (labelsNode.needsAltitude && node.material.getElevationTile()) {
+                //     node.material.getElevationTile().addEventListener('rasterElevationLevelChanged', () => { labelsNode.needsUpdate = true; });
+                // }
 
                 if (this.performance) {
                     this.#removeCulledLabels(labelsNode);

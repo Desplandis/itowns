@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 
 export default {
     setDefineMapping(object, PROPERTY, mapping) {

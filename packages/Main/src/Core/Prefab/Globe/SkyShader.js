@@ -14,7 +14,8 @@
  * Three.js integration by zz85 http://twitter.com/blurspline
  */
 
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 
 const skyShader = {
 
@@ -263,12 +264,12 @@ const skyShader = {
 
 class Sky extends THREE.Mesh {
     constructor() {
-        const skyUniforms = THREE.UniformsUtils.clone(skyShader.uniforms);
+        // const skyUniforms = THREE.UniformsUtils.clone(skyShader.uniforms);
 
         const skyMat = new THREE.ShaderMaterial({
             fragmentShader: skyShader.fragmentShader,
             vertexShader: skyShader.vertexShader,
-            uniforms: skyUniforms,
+            // uniforms: skyUniforms,
             side: THREE.BackSide,
             transparent: true,
             depthWrite: false,

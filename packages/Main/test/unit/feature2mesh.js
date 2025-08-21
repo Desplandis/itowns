@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import { CRS } from '@itowns/geographic';
 import assert from 'assert';
 import GeoJsonParser from 'Parser/GeoJsonParser';

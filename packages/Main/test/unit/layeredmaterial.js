@@ -5,7 +5,8 @@ import { updateLayeredMaterialNodeImagery } from 'Process/LayeredMaterialNodePro
 import GlobeView from 'Core/Prefab/GlobeView';
 import { Coordinates } from '@itowns/geographic';
 import TileMesh from 'Core/TileMesh';
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import Tile from 'Core/Tile/Tile';
 import OBB from 'Renderer/OBB';
 import { LayeredMaterial } from 'Renderer/LayeredMaterial';

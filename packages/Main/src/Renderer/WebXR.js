@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import VRControls from 'Controls/VRControls';
 
 // TODO handle xr session end

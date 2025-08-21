@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import TWEEN from '@tweenjs/tween.js';
 import DEMUtils from 'Utils/DEMUtils';
 import { MAIN_LOOP_EVENTS } from 'Core/MainLoop';

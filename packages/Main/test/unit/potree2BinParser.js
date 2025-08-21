@@ -1,6 +1,7 @@
 import assert from 'assert';
 import Potree2BinParser from 'Parser/Potree2BinParser';
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 
 describe('Potree2BinParser', function () {
     it('should correctly parse position buffer', function (done) {

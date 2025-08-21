@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 
 import TiledGeometryLayer from 'Layer/TiledGeometryLayer';
 import { globalExtentTMS } from 'Core/Tile/TileGrid';

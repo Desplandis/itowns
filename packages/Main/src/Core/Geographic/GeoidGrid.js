@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import { Coordinates, CRS } from '@itowns/geographic';
 
 const coord = new Coordinates('EPSG:4326');

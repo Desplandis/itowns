@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import { getMaxColorSamplerUnitsCount } from 'Renderer/LayeredMaterial';
 import { MAIN_LOOP_EVENTS } from 'Core/MainLoop';
 import assert from 'assert';

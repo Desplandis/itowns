@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import GeometryLayer from 'Layer/GeometryLayer';
 import { InfoTiledGeometryLayer } from 'Layer/InfoLayer';
 import Picking from 'Core/Picking';
@@ -373,42 +374,42 @@ class TiledGeometryLayer extends GeometryLayer {
      * otherwise.
      */
     static hasEnoughTexturesToSubdivide(context, node) {
-        const layerUpdateState = node.layerUpdateState || {};
-        let nodeLayer = node.material.getElevationTile();
+        // const layerUpdateState = node.layerUpdateState || {};
+        // let nodeLayer = node.material.getElevationTile();
 
-        for (const e of context.elevationLayers) {
-            const extents = node.getExtentsByProjection(e.crs);
-            const zoom = extents[0].zoom;
-            if (zoom > e.zoom.max || zoom < e.zoom.min) {
-                continue;
-            }
-            if (!e.frozen && e.ready && e.source.extentInsideLimit(node.extent, zoom) && (!nodeLayer || nodeLayer.level < 0)) {
-                // no stop subdivision in the case of a loading error
-                if (layerUpdateState[e.id] && layerUpdateState[e.id].inError()) {
-                    continue;
-                }
-                return false;
-            }
-        }
+        // for (const e of context.elevationLayers) {
+        //     const extents = node.getExtentsByProjection(e.crs);
+        //     const zoom = extents[0].zoom;
+        //     if (zoom > e.zoom.max || zoom < e.zoom.min) {
+        //         continue;
+        //     }
+        //     if (!e.frozen && e.ready && e.source.extentInsideLimit(node.extent, zoom) && (!nodeLayer || nodeLayer.level < 0)) {
+        //         // no stop subdivision in the case of a loading error
+        //         if (layerUpdateState[e.id] && layerUpdateState[e.id].inError()) {
+        //             continue;
+        //         }
+        //         return false;
+        //     }
+        // }
 
-        for (const c of context.colorLayers) {
-            if (c.frozen || !c.visible || !c.ready) {
-                continue;
-            }
-            const extents = node.getExtentsByProjection(c.crs);
-            const zoom = extents[0].zoom;
-            if (zoom > c.zoom.max || zoom < c.zoom.min) {
-                continue;
-            }
-            // no stop subdivision in the case of a loading error
-            if (layerUpdateState[c.id] && layerUpdateState[c.id].inError()) {
-                continue;
-            }
-            nodeLayer = node.material.getColorTile(c.id);
-            if (c.source.extentInsideLimit(node.extent, zoom) && (!nodeLayer || nodeLayer.level < 0)) {
-                return false;
-            }
-        }
+        // for (const c of context.colorLayers) {
+        //     if (c.frozen || !c.visible || !c.ready) {
+        //         continue;
+        //     }
+        //     const extents = node.getExtentsByProjection(c.crs);
+        //     const zoom = extents[0].zoom;
+        //     if (zoom > c.zoom.max || zoom < c.zoom.min) {
+        //         continue;
+        //     }
+        //     // no stop subdivision in the case of a loading error
+        //     if (layerUpdateState[c.id] && layerUpdateState[c.id].inError()) {
+        //         continue;
+        //     }
+        //     nodeLayer = node.material.getColorTile(c.id);
+        //     if (c.source.extentInsideLimit(node.extent, zoom) && (!nodeLayer || nodeLayer.level < 0)) {
+        //         return false;
+        //     }
+        // }
         return true;
     }
 

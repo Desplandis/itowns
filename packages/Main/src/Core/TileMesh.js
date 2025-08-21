@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import { geoidLayerIsVisible } from 'Layer/GeoidLayer';
 import { tiledCovering } from 'Core/Tile/Tile';
 
@@ -24,9 +25,11 @@ class TileMesh extends THREE.Mesh {
         this.extent = extent;
         this.extent.zoom = level;
 
+        this.receiveShadow = true;
+
         this.level = level;
 
-        this.material.setUniform('objectId', this.id);
+        // this.material.setUniform('objectId', this.id);
 
         this.obb = this.geometry.OBB.clone();
         this.boundingSphere = new THREE.Sphere();

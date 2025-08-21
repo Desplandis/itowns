@@ -1,5 +1,6 @@
 import assert from 'assert';
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import C3DTFeature from 'Core/3DTiles/C3DTFeature';
 import C3DTBatchTable from 'Core/3DTiles/C3DTBatchTable';
 import { obj2ArrayBuff } from './utils';

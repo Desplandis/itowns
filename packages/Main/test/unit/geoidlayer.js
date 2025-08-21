@@ -1,5 +1,6 @@
 /* global createGtxBuffer */
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import assert from 'assert';
 import GeoidLayer from 'Layer/GeoidLayer';
 import FileSource from 'Source/FileSource';

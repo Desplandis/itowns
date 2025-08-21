@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+/* eslint-disable */
+import * as THREE from 'three/webgpu';
 import { Ellipsoid, Coordinates } from '@itowns/geographic';
 import { C3DTilesTypes, C3DTilesBoundingVolumeTypes } from './C3DTilesEnums';
 
