@@ -3,7 +3,7 @@
 #include <morphtarget_pars_vertex>
 #include <logdepthbuf_pars_vertex>
 #include <clipping_planes_pars_vertex>
-varying vec4 vColor; // color_pars_vertex
+varying vec3 vColor; // color_pars_vertex
 
 #ifdef USE_POINTS_UV
     varying vec2 vUv;
@@ -18,16 +18,9 @@ uniform float scale;
 uniform bool picking;
 uniform int mode;
 
-uniform vec2 elevationRange;
-uniform vec2 intensityRange;
-uniform vec2 angleRange;
+uniform vec2 range;
 
-uniform sampler2D classificationTexture;
-uniform sampler2D discreteTexture;
-uniform sampler2D gradientTexture;
-uniform sampler2D visibilityTexture;
-
-uniform int sizeMode;
+uniform bool sizeAttenuation;
 uniform float minAttenuatedSize;
 uniform float maxAttenuatedSize;
 
@@ -40,26 +33,21 @@ attribute float returnNumber;
 attribute float numberOfReturns;
 attribute float scanAngle;
 
-void main() {
-    vec2 uv = vec2(classification/255., 0.5);
+varying vec2 vUv;
 
-    vColor = vec4(1.0);
+void main() {
+    vColor = vec3(1.0);
     if (picking) {
-        vColor = unique_id;
+        vColor = unique_id.xyz;
     } else {
         if (mode == PNTS_MODE_CLASSIFICATION) {
-            vColor = texture2D(classificationTexture, uv);
+            vUv = vec2(classification/255., 0.5);
         } else if (mode == PNTS_MODE_NORMAL) {
             vColor.rgb = abs(normal);
         } else if (mode == PNTS_MODE_COLOR) {
-#if defined(USE_COLOR)
-            vColor.rgb = color.rgb;
-#elif defined(USE_COLOR_ALPHA)
-            vColor = color;
-#endif
+#include <color_vertex>
         } else if (mode == PNTS_MODE_RETURN_NUMBER) {
-            vec2 uv = vec2(returnNumber/255., 0.5);
-            vColor = texture2D(discreteTexture, uv);
+            vUv = vec2(returnNumber/255., 0.5);
         } else if (mode == PNTS_MODE_RETURN_TYPE) {
             float returnType;
             if (returnNumber > numberOfReturns) {
@@ -81,35 +69,24 @@ void main() {
                     returnType = 2.;
                 }
             }
-            vec2 uv = vec2(returnType/255., 0.5);
-            vColor = texture2D(discreteTexture, uv);
+            vUv = vec2(returnType/255., 0.5);
         } else if (mode == PNTS_MODE_RETURN_COUNT) {
-            vec2 uv = vec2(numberOfReturns/255., 0.5);
-            vColor = texture2D(discreteTexture, uv);
+            vUv = vec2(numberOfReturns/255., 0.5);
         } else if (mode == PNTS_MODE_POINT_SOURCE_ID) {
-            vec2 uv = vec2(mod(pointSourceID, SOURCE_ID_GROUP)/255., 0.5);
-            vColor = texture2D(discreteTexture, uv);
+            vUv = vec2(mod(pointSourceID, SOURCE_ID_GROUP)/255., 0.5);
         } else if (mode == PNTS_MODE_SCAN_ANGLE) {
-            float i = (scanAngle - angleRange.x) / (angleRange.y - angleRange.x);
-            vec2 uv = vec2(i, (1. - i));
-            vColor = texture2D(gradientTexture, uv);
+            float i = (scanAngle - range.x) / (range.y - range.x);
+            vUv = vec2(i, (1. - i));
         } else if (mode == PNTS_MODE_INTENSITY) {
-            float i = (intensity - intensityRange.x) / (intensityRange.y - intensityRange.x);
-            vec2 uv = vec2(i, (1. - i));
-            vColor = texture2D(gradientTexture, uv);
+            float i = (intensity - range.x) / (range.y - range.x);
+            vUv = vec2(i, (1. - i));
         } else if (mode == PNTS_MODE_ELEVATION) {
             float z = (modelMatrix * vec4(position, 1.0)).z;
-            float i = (z - elevationRange.x) / (elevationRange.y - elevationRange.x);
-            vec2 uv = vec2(i, (1. - i));
-            vColor = texture2D(gradientTexture, uv);
+            float i = (z - range.x) / (range.y - range.x);
+            vUv = vec2(i, (1. - i));
         }
     }
-
-    if (texture2D(visibilityTexture, uv).r == 0.) {
-        vColor.a = 0.;
-    }
-
-#define USE_COLOR_ALPHA
+#include <morphinstance_vertex>
 #include <morphcolor_vertex>
 #include <begin_vertex>
 #include <morphtarget_vertex>
@@ -117,7 +94,7 @@ void main() {
 
     gl_PointSize = size;
 
-    if (sizeMode == PNTS_SIZE_MODE_ATTENUATED) {
+    if (sizeAttenuation) {
         bool isPerspective = isPerspectiveMatrix(projectionMatrix);
 
         if (isPerspective) {

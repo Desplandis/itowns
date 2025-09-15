@@ -410,20 +410,18 @@ class OGC3DTilesLayer extends GeometryLayer {
         let material = model.material;
 
         if (model.isPoints) {
-            const pointsMaterial = new PointsMaterial({
-                mode: this.pntsMode,
-                shape: this.pntsShape,
-                classificationScheme: this.classification,
-                sizeMode: this.pntsSizeMode,
-                minAttenuatedSize: this.pntsMinAttenuatedSize,
-                maxAttenuatedSize: this.pntsMaxAttenuatedSize,
-            });
+            const pointsMaterial = new PointsMaterial();
             pointsMaterial.copy(material);
+            pointsMaterial.mode = this.pntsMode;
+            pointsMaterial.shape = this.pntsShape;
+            pointsMaterial.classificationScheme = this.classification;
+            pointsMaterial.sizeMode = this.pntsSizeMode;
+            pointsMaterial.minAttenuatedSize = this.pntsMinAttenuatedSize;
+            pointsMaterial.maxAttenuatedSize = this.pntsMaxAttenuatedSize;
             material = pointsMaterial;
         }
 
         if (material) {
-            material.transparent = true;
             ReferLayerProperties(material, this);
         }
 

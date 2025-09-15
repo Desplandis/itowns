@@ -72,7 +72,10 @@
                 TMSSource, WMTSSource, OGC3DTilesSource,
                 ColorLayer, ElevationLayer, OGC3DTilesLayer, PNTS_SIZE_MODE,
                 GlobeView, Coordinates, Fetcher,
+                ClassificationScheme,
             } = itowns;
+
+            ClassificationScheme.DEFAULT[6].opacity = 0;
 
             window.layer = null; // 3D Tiles layer
 

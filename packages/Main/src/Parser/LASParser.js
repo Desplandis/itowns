@@ -41,7 +41,7 @@ function buildBufferGeometry(attributes) {
     geometry.setAttribute('pointSourceID', pointSourceID);
 
     if (attributes.color) {
-        const colorBuffer = new THREE.BufferAttribute(attributes.color, 4, true);
+        const colorBuffer = new THREE.BufferAttribute(attributes.color, 3, true);
         geometry.setAttribute('color', colorBuffer);
     }
     const scanAngle = new THREE.BufferAttribute(attributes.scanAngle, 1);

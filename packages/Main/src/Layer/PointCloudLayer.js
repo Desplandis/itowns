@@ -217,7 +217,12 @@ class PointCloudLayer extends GeometryLayer {
             this.material.intensityRange = new THREE.Vector2(this.minIntensityRange, this.maxIntensityRange);
             this.material.elevationRange = new THREE.Vector2(this.minElevationRange, this.maxElevationRange);
             this.material.angleRange = new THREE.Vector2(this.minAngleRange, this.maxAngleRange);
-            this.material = new PointsMaterial(this.material);
+            // this.material = new PointsMaterial(this.material);
+            this.material = new PointsMaterial();
+            this.material.vertexColors = true;
+            // this.material.sizeAttenuation = true;
+            this.material.size = 30;
+            this.material.needsUpdate = true;
         }
 
         this.mode = mode || PNTS_MODE.COLOR;
@@ -238,12 +243,8 @@ class PointCloudLayer extends GeometryLayer {
         if (this.material) {
             this.material.visible = this.visible;
             this.material.opacity = this.opacity;
-            this.material.depthWrite = false;
             this.material.size = this.pointSize;
             this.material.scale = context.camera.preSSE;
-            if (this.material.updateUniforms) {
-                this.material.updateUniforms();
-            }
         }
 
         // lookup lowest common ancestor of changeSources

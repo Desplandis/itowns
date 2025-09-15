@@ -65,7 +65,7 @@ class LASLoader {
         const numberOfReturns = new Uint8Array(view.pointCount);
         const classifications = new Uint8Array(view.pointCount);
         const pointSourceIDs = new Uint16Array(view.pointCount);
-        const colors = getColor ? new Uint8Array(view.pointCount * 4) : undefined;
+        const colors = getColor ? new Uint8Array(view.pointCount * 3) : undefined;
         /*
         As described by the LAS spec, Scan Angle is encoded:
         - as signed char in a valid range from -90 to +90 (degrees) prior to the LAS 1.4 Point Data Record Formats (PDRF) 6
@@ -102,10 +102,9 @@ class LASLoader {
                     b /= 256;
                 }
 
-                colors[i * 4] = r;
-                colors[i * 4 + 1] = g;
-                colors[i * 4 + 2] = b;
-                colors[i * 4 + 3] = 255;
+                colors[i * 3] = r;
+                colors[i * 3 + 1] = g;
+                colors[i * 3 + 2] = b;
             }
 
             classifications[i] = getClassification(i);
