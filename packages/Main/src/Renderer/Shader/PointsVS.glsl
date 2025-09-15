@@ -34,6 +34,7 @@ attribute float numberOfReturns;
 attribute float scanAngle;
 
 varying vec2 vUv;
+out vec2 vUv1;
 
 void main() {
     vColor = vec3(1.0);

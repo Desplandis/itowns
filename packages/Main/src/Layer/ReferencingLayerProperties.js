@@ -15,8 +15,8 @@ function ReferLayerProperties(material, layer) {
             });
         }
 
-        if (material.uniforms && material.uniforms.mode != undefined) {
-            Object.defineProperty(material.uniforms.mode, 'value', {
+        if (material.mode && material.uniforms.mode != undefined) {
+            Object.defineProperty(material.mode, 'value', {
                 get: () => material.layer.pntsMode,
             });
         }

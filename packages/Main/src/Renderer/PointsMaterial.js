@@ -13,6 +13,7 @@ import {
     UniformsUtils,
     Vector2,
 } from 'three';
+import * as THREE from 'three';
 import PointsVS from 'Renderer/Shader/PointsVS.glsl';
 import PointsFS from 'Renderer/Shader/PointsFS.glsl';
 import Gradients from 'Utils/Gradients';
@@ -40,17 +41,7 @@ export const PNTS_SIZE_MODE = {
     ATTENUATED: 1,
 };
 
-const white = new Color(1.0,  1.0,  1.0);
-
-function updateTransformUniform(map, uniform) {
-    if (!map) { return; }
-
-    if (map.matrixAutoUpdate) {
-        map.updateMatrix();
-    }
-
-    uniform.value.copy(map.matrix);
-}
+const white = new THREE.Color(1.0,  1.0,  1.0);
 
 /**
  * Every lidar point can have a classification assigned to it that defines
@@ -68,40 +59,41 @@ function updateTransformUniform(map, uniform) {
 
 export const ClassificationScheme = {
     DEFAULT: {
-        0: { visible: true, name: 'never classified', color: new Color(0.5,  0.5,  0.5), opacity: 1.0 },
-        1: { visible: true, name: 'unclassified', color: new Color(0.5,  0.5,  0.5), opacity: 1.0 },
-        2: { visible: true, name: 'ground', color: new Color(0.63, 0.32, 0.18), opacity: 1.0 },
-        3: { visible: true, name: 'low vegetation', color: new Color(0.0,  1.0,  0.0), opacity: 1.0 },
-        4: { visible: true, name: 'medium vegetation', color: new Color(0.0,  0.8,  0.0), opacity: 1.0 },
-        5: { visible: true, name: 'high vegetation', color: new Color(0.0,  0.6,  0.0), opacity: 1.0 },
-        6: { visible: true, name: 'building', color: new Color(1.0,  0.66, 0.0), opacity: 1.0 },
-        7: { visible: true, name: 'low point(noise)', color: new Color(1.0,  0.0,  1.0), opacity: 1.0 },
-        8: { visible: true, name: 'key-point', color: new Color(1.0,  0.0,  0.0), opacity: 1.0 },
-        9: { visible: true, name: 'water', color: new Color(0.0,  0.0,  1.0), opacity: 1.0 },
-        10: { visible: true, name: 'rail', color: new Color(0.8,  0.8,  1.0), opacity: 1.0 },
-        11: { visible: true, name: 'road Surface', color: new Color(0.4,  0.4,  0.7), opacity: 1.0 },
-        12: { visible: true, name: 'overlap', color: new Color(1.0,  1.0,  0.0), opacity: 1.0 },
-        DEFAULT: { visible: true, name: 'default', color: new Color(0.3, 0.6, 0.6), opacity: 1.0 },
+        0: { visible: true, name: 'never classified', color: new THREE.Color(0.5,  0.5,  0.5), opacity: 1.0 },
+        1: { visible: true, name: 'unclassified', color: new THREE.Color(0.5,  0.5,  0.5), opacity: 1.0 },
+        2: { visible: true, name: 'ground', color: new THREE.Color(0.63, 0.32, 0.18), opacity: 1.0 },
+        3: { visible: true, name: 'low vegetation', color: new THREE.Color(0.0,  1.0,  0.0), opacity: 1.0 },
+        4: { visible: true, name: 'medium vegetation', color: new THREE.Color(0.0,  0.8,  0.0), opacity: 1.0 },
+        5: { visible: true, name: 'high vegetation', color: new THREE.Color(0.0,  0.6,  0.0), opacity: 1.0 },
+        6: { visible: true, name: 'building', color: new THREE.Color(1.0,  0.66, 0.0), opacity: 1.0 },
+        7: { visible: true, name: 'low point(noise)', color: new THREE.Color(1.0,  0.0,  1.0), opacity: 1.0 },
+        8: { visible: true, name: 'key-point', color: new THREE.Color(1.0,  0.0,  0.0), opacity: 1.0 },
+        9: { visible: true, name: 'water', color: new THREE.Color(0.0,  0.0,  1.0), opacity: 1.0 },
+        10: { visible: true, name: 'rail', color: new THREE.Color(0.8,  0.8,  1.0), opacity: 1.0 },
+        11: { visible: true, name: 'road Surface', color: new THREE.Color(0.4,  0.4,  0.7), opacity: 1.0 },
+        12: { visible: true, name: 'overlap', color: new THREE.Color(1.0,  1.0,  0.0), opacity: 1.0 },
+        DEFAULT: { visible: true, name: 'default', color: new THREE.Color(0.3, 0.6, 0.6), opacity: 1.0 },
     },
 };
 
 const DiscreteScheme = {
     DEFAULT: {
-        0: { visible: true, name: '0', color: new Color('rgb(67, 99, 216)'), opacity: 1.0 },
-        1: { visible: true, name: '1', color: new Color('rgb(60, 180, 75);'), opacity: 1.0 },
-        2: { visible: true, name: '2', color: new Color('rgb(255, 255, 25)'), opacity: 1.0 },
-        3: { visible: true, name: '3', color: new Color('rgb(145, 30, 180)'), opacity: 1.0 },
-        4: { visible: true, name: '4', color: new Color('rgb(245, 130, 49)'), opacity: 1.0 },
-        5: { visible: true, name: '5', color: new Color('rgb(230, 25, 75)'), opacity: 1.0 },
-        6: { visible: true, name: '6', color: new Color('rgb(66, 212, 244)'), opacity: 1.0 },
-        7: { visible: true, name: '7', color: new Color('rgb(240, 50, 230)'), opacity: 1.0 },
+        0: { visible: true, name: '0', color: new THREE.Color('rgb(67, 99, 216)'), opacity: 1.0 },
+        1: { visible: true, name: '1', color: new THREE.Color('rgb(60, 180, 75);'), opacity: 1.0 },
+        2: { visible: true, name: '2', color: new THREE.Color('rgb(255, 255, 25)'), opacity: 1.0 },
+        3: { visible: true, name: '3', color: new THREE.Color('rgb(145, 30, 180)'), opacity: 1.0 },
+        4: { visible: true, name: '4', color: new THREE.Color('rgb(245, 130, 49)'), opacity: 1.0 },
+        5: { visible: true, name: '5', color: new THREE.Color('rgb(230, 25, 75)'), opacity: 1.0 },
+        6: { visible: true, name: '6', color: new THREE.Color('rgb(66, 212, 244)'), opacity: 1.0 },
+        7: { visible: true, name: '7', color: new THREE.Color('rgb(240, 50, 230)'), opacity: 1.0 },
         DEFAULT: { visible: true, name: 'default', color: white, opacity: 1.0 },
     },
 };
 
 // Taken from Potree. Copyright (c) 2011-2020, Markus Schütz All rights reserved.
 // https://github.com/potree/potree/blob/develop/src/materials/PointCloudMaterial.js
-function generateGradientTexture(gradient) {
+function generateGradientTexture(gradient, texture) {
+    console.log('generate gradient texture');
     const size = 64;
 
     // create canvas
@@ -125,11 +117,11 @@ function generateGradientTexture(gradient) {
     context.fillStyle = ctxGradient;
     context.fill();
 
-    const texture = new CanvasTexture(canvas);
+    const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
 
-    texture.minFilter = LinearFilter;
-    texture.wrap = RepeatWrapping;
+    texture.minFilter = THREE.LinearFilter;
+    texture.wrap = THREE.RepeatWrapping;
     texture.repeat = 2;
 
     return texture;
@@ -192,13 +184,44 @@ function rangeFromMode(mode, params) {
         case PNTS_MODE.ELEVATION:
             return params.elevationRange;
         case PNTS_MODE.SCAN_ANGLE:
-            return params.angleRange;
         default:
-            return new Vector2(0, 0);
+            return params.angleRange;
     }
 }
 
-class PointsMaterial extends ShaderMaterial {
+function updateTransformUniform(map, uniform) {
+    if (!map) { return; }
+
+    if (map.matrixAutoUpdate) {
+        map.updateMatrix();
+    }
+
+    uniform.value.copy(map.matrix);
+}
+
+function defineMapUniform(material, property, uniform, transformUniform) {
+    return Object.defineProperty(material, property, {
+        get: () => uniform.value,
+        set: (map) => {
+            if (!map !== !uniform.value) { // <=> map XOR uniform.value
+                material.needsUpdate = true;
+            }
+            uniform.value = map;
+            updateTransformUniform(map, transformUniform);
+        },
+        configurable: true,
+    });
+}
+
+function defineScalarUniform(material, property, uniform) {
+    return Object.defineProperty(material, property,  {
+        get: () => uniform.value,
+        set: (value) => { uniform.value = value; },
+        configurable: true,
+    });
+}
+
+class PointsMaterial extends THREE.ShaderMaterial {
     /**
      * @class      PointsMaterial
      * @param      {object}  [options={}]  The options
@@ -232,23 +255,41 @@ class PointsMaterial extends ShaderMaterial {
      */
     constructor(options = {}) {
         const gradients = {
+            ...options.gradient,
             ...Gradients,
         };
+        options.gradient = Object.values(gradients)[0];
+
+        const {
+            intensityRange = new THREE.Vector2(1, 65536),
+            elevationRange = new THREE.Vector2(0, 1000),
+            angleRange = new THREE.Vector2(-90, 90),
+            classificationScheme = ClassificationScheme.DEFAULT,
+            discreteScheme = DiscreteScheme.DEFAULT,
+            size = 1,
+            mode = PNTS_MODE.COLOR,
+            shape = PNTS_SHAPE.CIRCLE,
+            sizeMode = PNTS_SIZE_MODE.ATTENUATED,
+            minAttenuatedSize = 3,
+            maxAttenuatedSize = 10,
+            gradient,
+            gamma = 1.0,
+            scale = 0.05 * 0.5 / Math.tan(1.0 / 2.0),
+            ambientBoost = 0.0,
+            ...materialOptions
+        } = options;
 
         super({
-            ...options,
+            ...materialOptions,
             fog: true,
-            // transparent: true, // TODO: move to layer?
+            transparent: true,
             precision: 'highp',
-            // vertexColors: true,
         });
 
-        this.name = 'PointsMaterial';
-
-        this.uniforms = UniformsUtils.merge([
+        this.uniforms = THREE.UniformsUtils.merge([
             // THREE.PointsMaterial uniforms
-            UniformsLib.points,
-            UniformsLib.fog,
+            THREE.UniformsLib.points,
+            THREE.UniformsLib.fog,
             // Added uniforms (defaults emulate THREE.PointsMaterial behavior)
             {
                 mode: { value: PNTS_MODE.COLOR },
@@ -269,43 +310,15 @@ class PointsMaterial extends ShaderMaterial {
         Object.defineProperty(this, 'color', {
             get: () => this.uniforms.diffuse.value,
             set: (color) => { this.uniforms.diffuse.value.copy(color); },
+            configurable: true,
         });
 
-        Object.defineProperty(this, 'opacity', {
-            get: () => this.uniforms.opacity.value,
-            set: (opacity) => { this.uniforms.opacity.value = opacity; },
-        });
-
-        Object.defineProperty(this, 'size', {
-            get: () => this.uniforms.size.value,
-            set: (size) => { this.uniforms.size.value = size; },
-        });
-
-        Object.defineProperty(this, 'scale', {
-            get: () => this.uniforms.scale.value,
-            set: (scale) => { this.uniforms.scale.value = scale; },
-        });
-
-        Object.defineProperty(this, 'map', {
-            get: () => this.uniforms.map.value,
-            set: (map) => {
-                this.uniforms.map.value = map;
-                updateTransformUniform(map, this.uniforms.uvTransform);
-            },
-        });
-
-        Object.defineProperty(this, 'alphaMap', {
-            get: () => this.uniforms.alphaMap.value,
-            set: (map) => {
-                this.uniforms.alphaMap.value = map;
-                updateTransformUniform(map, this.uniforms.alphaMapTransform);
-            },
-        });
-
-        Object.defineProperty(this, 'sizeAttenuation', {
-            get: () => this.uniforms.sizeAttenuation.value,
-            set: (value) => { this.uniforms.sizeAttenuation.value = value; },
-        });
+        defineScalarUniform(this, 'opacity', this.uniforms.opacity);
+        defineScalarUniform(this, 'size', this.uniforms.size);
+        defineScalarUniform(this, 'scale', this.uniforms.scale);
+        defineMapUniform(this, 'map', this.uniforms.map, this.uniforms.uvTransform);
+        defineMapUniform(this, 'alphaMap', this.uniforms.alphaMap, this.uniforms.alphaMapTransform);
+        defineScalarUniform(this, 'sizeAttenuation', this.uniforms.sizeAttenuation);
 
         Object.defineProperty(this, 'mode', {
             get: () => this.uniforms.mode.value,
@@ -313,67 +326,44 @@ class PointsMaterial extends ShaderMaterial {
                 this.uniforms.mode.value = value;
                 this.uniforms.range.value = rangeFromMode(value, this);
                 this.map = mapFromMode(value, this);
-                // TODO: needsUpdate only when necessary
-                this.needsUpdate = true;
             },
+            configurable: true,
         });
+        // TODO: When updating gradient, it does not update the reference
+        // TODO: ALPHAMAP OMG
 
-        Object.defineProperty(this, 'shape', {
-            get: () => this.uniforms.shape.value,
-            set: (value) => { this.uniforms.shape.value = value; },
-        });
-
-        Object.defineProperty(this, 'picking', {
-            get: () => this.uniforms.picking.value,
-            set: (value) => { this.uniforms.picking.value = value; },
-        });
-
-        Object.defineProperty(this, 'minAttenuatedSize', {
-            get: () => this.uniforms.minAttenuatedSize.value,
-            set: (value) => { this.uniforms.minAttenuatedSize.value = value; },
-        });
-
-        Object.defineProperty(this, 'maxAttenuatedSize', {
-            get: () => this.uniforms.maxAttenuatedSize.value,
-            set: (value) => { this.uniforms.maxAttenuatedSize.value = value; },
-        });
-
-        Object.defineProperty(this, 'gamma', {
-            get: () => this.uniforms.gamma.value,
-            set: (value) => { this.uniforms.gamma.value = value; },
-        });
-
-        Object.defineProperty(this, 'ambientBoost', {
-            get: () => this.uniforms.ambientBoost.value,
-            set: (value) => { this.uniforms.ambientBoost.value = value; },
-        });
+        defineScalarUniform(this, 'shape', this.uniforms.shape);
+        defineScalarUniform(this, 'picking', this.uniforms.picking);
+        defineScalarUniform(this, 'minAttenuatedSize', this.uniforms.minAttenuatedSize);
+        defineScalarUniform(this, 'maxAttenuatedSize', this.uniforms.maxAttenuatedSize);
+        defineScalarUniform(this, 'gamma', this.uniforms.gamma);
+        defineScalarUniform(this, 'ambientBoost', this.uniforms.ambientBoost);
 
         this.color = new Color(0xffffff);
         this.opacity = 1.0;
-        this.size = 1;
-        this.scale = 1.0;
+        this.size = size;
+        this.scale = scale;
         this.map = null;
         this.alphaMap = null;
-        this.sizeAttenuation = true;
+        this.sizeAttenuation = sizeMode === PNTS_SIZE_MODE.ATTENUATED;
 
-        this.mode = PNTS_MODE.COLOR; // equivalent to THREE.PointsMaterial
-        this.shape = PNTS_SHAPE.CIRCLE; // equivalent to THREE.PointsMaterial
+        this.mode = mode;
+        this.shape = shape;
         this.picking = false;
-        this.minAttenuatedSize = 0;
-        this.maxAttenuatedSize = Infinity;
-        this.gamma = 1.0;
-        this.ambientBoost = 0.0;
-        this.intensityRange = new Vector2(1, 65536);
-        this.elevationRange = new Vector2(0, 1000);
-        this.angleRange = new Vector2(-90, 90);
+        this.minAttenuatedSize = minAttenuatedSize;
+        this.maxAttenuatedSize = maxAttenuatedSize;
+        this.gamma = gamma;
+        this.ambientBoost = ambientBoost;
+        this.intensityRange = intensityRange;
+        this.elevationRange = elevationRange;
+        this.angleRange = angleRange;
 
-        // TODO: ajouter surtout range comme unique uniform
         // TODO: ajouter ENFIN l'alphaMap (après tout ce temps)
 
         this.gradients = gradients;
-        this.gradientTexture = new CanvasTexture();
         this.classificationTexture = new DataTexture(new Uint8Array(256 * 4), 256, 1, RGBAFormat);
         this.discreteTexture = new DataTexture(new Uint8Array(256 * 4), 256, 1, RGBAFormat);
+        this.gradientTexture = generateGradientTexture(Gradients.SPECTRAL);
         // add texture to apply visibility.
         // const dataVisi = new Uint8Array(256 * 1);
         // const textureVisi = new THREE.DataTexture(dataVisi, 256, 1, THREE.RedFormat);
@@ -388,18 +378,16 @@ class PointsMaterial extends ShaderMaterial {
         // Update classification and discrete Texture
         this.recomputeClassification();
         this.recomputeDiscreteTexture();
-        this.gradientTexture = generateGradientTexture(Gradients.SPECTRAL);
         // this.recomputeVisibilityTexture();
 
         // Gradient texture for continuous values
-        // this.gradient = gradient;
-        // CommonMaterial.setUniformProperty(this, 'gradientTexture', this.gradientTexture);
-
-        // this.map = this.gradientTexture;
+        this.gradient = gradient;
     }
 
     /** @override */
     onBeforeCompile(shader) {
+        console.log('Compiling shader');
+        // TODO: Statically know, move from onBeforeCompile
         Object.keys(PNTS_MODE).forEach((key) => {
             shader.defines[`PNTS_MODE_${key}`] = PNTS_MODE[key];
         });
@@ -411,12 +399,17 @@ class PointsMaterial extends ShaderMaterial {
         }
     }
 
-    /** @override */
+    /**
+     * Copy the parameters from the passed material into this material.
+     * @override
+     * @param {THREE.PointsMaterial} source
+     * @returns {this}
+     */
     copy(source) {
         if (source.isShaderMaterial) {
             super.copy(source);
         } else {
-            Material.prototype.copy.call(this, source);
+            THREE.Material.prototype.copy.call(this, source);
         }
 
         // Parameters of THREE.PointsMaterial
@@ -456,10 +449,6 @@ class PointsMaterial extends ShaderMaterial {
     }
 
     recomputeVisibilityTexture() {
-        if (this.alphaMap === null) {
-            this.alphaMap = new DataTexture(new Uint8Array(256 * 1), 256, 1, RedFormat);
-            this.alphaMap.magFilter = NearestFilter;
-        }
         const texture = this.visibilityTexture;
         const scheme = this.classificationScheme;
 
@@ -485,6 +474,15 @@ class PointsMaterial extends ShaderMaterial {
             type: 'material_property_changed',
             target: this.uniforms,
         });
+    }
+
+    enablePicking(picking) {
+        this.picking = picking;
+        this.blending = picking ? THREE.NoBlending : THREE.NormalBlending;
+    }
+
+    set gradient(value) {
+        this.gradientTexture = generateGradientTexture(value);
     }
 }
 
