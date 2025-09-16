@@ -1,18 +1,3 @@
-import {
-    Color,
-    CanvasTexture,
-    DataTexture,
-    LinearFilter,
-    NearestFilter,
-    Material,
-    RepeatWrapping,
-    RedFormat,
-    RGBAFormat,
-    ShaderMaterial,
-    UniformsLib,
-    UniformsUtils,
-    Vector2,
-} from 'three';
 import * as THREE from 'three';
 import PointsVS from 'Renderer/Shader/PointsVS.glsl';
 import PointsFS from 'Renderer/Shader/PointsFS.glsl';
@@ -93,20 +78,21 @@ const DiscreteScheme = {
 // Taken from Potree. Copyright (c) 2011-2020, Markus Schütz All rights reserved.
 // https://github.com/potree/potree/blob/develop/src/materials/PointCloudMaterial.js
 function generateGradientTexture(gradient, texture) {
-    console.log('generate gradient texture');
-    const size = 64;
-
-    // create canvas
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
+    if (!texture) {
+        const size = 64;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        texture = new THREE.CanvasTexture(canvas);
+    }
 
     // get context
+    const canvas = texture.image;
     const context = canvas.getContext('2d');
 
     // draw gradient
-    context.rect(0, 0, size, size);
-    const ctxGradient = context.createLinearGradient(0, 0, size, size);
+    context.rect(0, 0, canvas.width, canvas.height);
+    const ctxGradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
 
     for (let i = 0; i < gradient.length; i++) {
         const step = gradient[i];
@@ -117,7 +103,6 @@ function generateGradientTexture(gradient, texture) {
     context.fillStyle = ctxGradient;
     context.fill();
 
-    const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
 
     texture.minFilter = THREE.LinearFilter;
@@ -157,6 +142,32 @@ function recomputeTexture(scheme, texture, nbClass) {
         data[j + 3] = parseInt(255 * opacity, 10);
     }
     texture.needsUpdate = true;
+}
+
+function recomputeAlphaMap(scheme, texture) {
+    if (!texture) {
+        texture = new THREE.DataTexture(new Uint8Array(256 * 1), 256, 1, THREE.RedFormat, THREE.UnsignedByteType);
+    }
+
+    const data = texture.image.data;
+    const width = texture.image.width;
+
+    for (let i = 0; i < width; i++) {
+        let visible;
+
+        if (scheme[i]) {
+            visible  = scheme[i].visible;
+        } else if (scheme.DEFAULT) {
+            visible  = scheme.DEFAULT.visible;
+        } else {
+            visible = true;
+        }
+
+        data[i] = visible ? 255 : 0;
+    }
+    texture.needsUpdate = true;
+
+    return texture;
 }
 
 function mapFromMode(mode, params) {
@@ -300,7 +311,7 @@ class PointsMaterial extends THREE.ShaderMaterial {
                 maxAttenuatedSize: { value: Infinity },
                 gamma: { value: 1.0 },
                 ambientBoost: { value: 0.0 },
-                range: { value: new Vector2(0, 0) },
+                range: { value: new THREE.Vector2(0, 0) },
             },
         ]);
         this.vertexShader = PointsVS;
@@ -339,13 +350,17 @@ class PointsMaterial extends THREE.ShaderMaterial {
         defineScalarUniform(this, 'gamma', this.uniforms.gamma);
         defineScalarUniform(this, 'ambientBoost', this.uniforms.ambientBoost);
 
-        this.color = new Color(0xffffff);
+        this.color = new THREE.Color(0xffffff);
         this.opacity = 1.0;
         this.size = size;
         this.scale = scale;
         this.map = null;
         this.alphaMap = null;
         this.sizeAttenuation = sizeMode === PNTS_SIZE_MODE.ATTENUATED;
+
+        this.intensityRange = intensityRange;
+        this.elevationRange = elevationRange;
+        this.angleRange = angleRange;
 
         this.mode = mode;
         this.shape = shape;
@@ -354,31 +369,25 @@ class PointsMaterial extends THREE.ShaderMaterial {
         this.maxAttenuatedSize = maxAttenuatedSize;
         this.gamma = gamma;
         this.ambientBoost = ambientBoost;
-        this.intensityRange = intensityRange;
-        this.elevationRange = elevationRange;
-        this.angleRange = angleRange;
 
         // TODO: ajouter ENFIN l'alphaMap (après tout ce temps)
+        // TODO: Merge statically known vertex/fragment shader
 
+        this.classificationScheme = classificationScheme;
+        this.discreteScheme = discreteScheme;
         this.gradients = gradients;
-        this.classificationTexture = new DataTexture(new Uint8Array(256 * 4), 256, 1, RGBAFormat);
-        this.discreteTexture = new DataTexture(new Uint8Array(256 * 4), 256, 1, RGBAFormat);
+
+        this.classificationTexture = new THREE.DataTexture(new Uint8Array(256 * 4), 256, 1, THREE.RGBAFormat);
+        this.discreteTexture = new THREE.DataTexture(new Uint8Array(256 * 4), 256, 1, THREE.RGBAFormat);
         this.gradientTexture = generateGradientTexture(Gradients.SPECTRAL);
-        // add texture to apply visibility.
-        // const dataVisi = new Uint8Array(256 * 1);
-        // const textureVisi = new THREE.DataTexture(dataVisi, 256, 1, THREE.RedFormat);
-
-        // textureVisi.needsUpdate = true;
-        // textureVisi.magFilter = THREE.NearestFilter;
-        // this.visibilityTexture = textureVisi;
-
-        this.classificationScheme = ClassificationScheme.DEFAULT;
-        this.discreteScheme = DiscreteScheme.DEFAULT;
+        this.alphaMap = recomputeAlphaMap(this.classificationScheme);
 
         // Update classification and discrete Texture
         this.recomputeClassification();
         this.recomputeDiscreteTexture();
-        // this.recomputeVisibilityTexture();
+        this.recomputeVisibilityTexture();
+
+        this.alphaTest = 1.5;
 
         // Gradient texture for continuous values
         this.gradient = gradient;
@@ -387,7 +396,7 @@ class PointsMaterial extends THREE.ShaderMaterial {
     /** @override */
     onBeforeCompile(shader) {
         console.log('Compiling shader');
-        // TODO: Statically know, move from onBeforeCompile
+        // TODO: Statically known, move from onBeforeCompile
         Object.keys(PNTS_MODE).forEach((key) => {
             shader.defines[`PNTS_MODE_${key}`] = PNTS_MODE[key];
         });
@@ -449,26 +458,7 @@ class PointsMaterial extends THREE.ShaderMaterial {
     }
 
     recomputeVisibilityTexture() {
-        const texture = this.visibilityTexture;
-        const scheme = this.classificationScheme;
-
-        const data = texture.image.data;
-        const width = texture.image.width;
-
-        for (let i = 0; i < width; i++) {
-            let visible;
-
-            if (scheme[i]) {
-                visible  = scheme[i].visible;
-            } else if (scheme.DEFAULT) {
-                visible  = scheme.DEFAULT.visible;
-            } else {
-                visible = true;
-            }
-
-            data[i] = visible ? 255 : 0;
-        }
-        texture.needsUpdate = true;
+        recomputeAlphaMap(this.classificationScheme, this.alphaMap);
 
         this.dispatchEvent({
             type: 'material_property_changed',
@@ -482,7 +472,7 @@ class PointsMaterial extends THREE.ShaderMaterial {
     }
 
     set gradient(value) {
-        this.gradientTexture = generateGradientTexture(value);
+        generateGradientTexture(value, this.gradientTexture);
     }
 }
 

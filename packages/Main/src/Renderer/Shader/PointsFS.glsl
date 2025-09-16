@@ -16,6 +16,8 @@ uniform float ambientBoost;
 uniform bool picking;
 uniform int shape;
 
+in vec2 vUv1;
+
 void main() {
 
     // Early discard (clipping planes and shape)
@@ -27,17 +29,29 @@ void main() {
         }
     }
 
-    // Assign gl_FragDepth
-#include <logdepthbuf_fragment>
-
     // Assign diffuseColor
     vec4 diffuseColor = vec4(diffuse, opacity);
-#include <map_particle_fragment>
+#if defined(USE_MAP) || defined(USE_ALPHAMAP)
+    #if defined(USE_POINTS_UV)
+	vec2 uv = vUv;
+    #else
+	vec2 uv = (uvTransform * vec3(gl_PointCoord.x, 1.0 - gl_PointCoord.y, 1)).xy;
+    #endif
+#endif
+#ifdef USE_MAP
+	diffuseColor *= texture2D(map, uv);
+#endif
+#ifdef USE_ALPHAMAP
+	diffuseColor.a *= texture2D(alphaMap, vUv1).r;
+#endif
 #include <color_fragment>
 
     // Alpha discards (alpha test, alpha to coverage and alpha hash)
 #include <alphatest_fragment>
 #include <alphahash_fragment>
+
+    // Assign gl_FragDepth
+#include <logdepthbuf_fragment>
 
     // Assign gl_FragColor
     vec3 outgoingLight = diffuseColor.rgb;

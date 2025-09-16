@@ -3,7 +3,7 @@
 #include <morphtarget_pars_vertex>
 #include <logdepthbuf_pars_vertex>
 #include <clipping_planes_pars_vertex>
-varying vec3 vColor; // color_pars_vertex
+out vec3 vColor; // color_pars_vertex
 
 #ifdef USE_POINTS_UV
     varying vec2 vUv;
@@ -33,16 +33,17 @@ attribute float returnNumber;
 attribute float numberOfReturns;
 attribute float scanAngle;
 
-varying vec2 vUv;
+out vec2 vUv;
 out vec2 vUv1;
 
 void main() {
     vColor = vec3(1.0);
+    vUv1 = vec2(classification/255., 0.5);
     if (picking) {
         vColor = unique_id.xyz;
     } else {
         if (mode == PNTS_MODE_CLASSIFICATION) {
-            vUv = vec2(classification/255., 0.5);
+            vUv = vUv1;
         } else if (mode == PNTS_MODE_NORMAL) {
             vColor.rgb = abs(normal);
         } else if (mode == PNTS_MODE_COLOR) {
