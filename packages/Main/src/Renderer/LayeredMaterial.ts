@@ -91,6 +91,7 @@ const TEXTURE_ARRAY_CACHE_CAPACITY = 200;
  * @param max - The maximum number of layers for the DataArrayTexture.
  */
 function updateLayersUniforms<Type extends 'c' | 'e'>(
+    renderer: THREE.WebGLRenderer,
     uniforms: { [name: string]: THREE.IUniform },
     tiles: RasterTile[],
     max: number,
@@ -148,12 +149,11 @@ function updateLayersUniforms<Type extends 'c' | 'e'>(
     if (textureArraysCache.has(textureSetId)) {
         uTextures.value = textureArraysCache.get(textureSetId);
         uTextureCount.value = count;
-        const renderer: THREE.WebGLRenderer = view.renderer;
         renderer.initTexture(uTextures.value);
         return;
     }
 
-    if (!makeDataArrayTexture(uTextures, width, height, count, tiles, max)) {
+    if (!makeDataArrayTexture(renderer, uTextures, width, height, count, tiles, max)) {
         uTextureCount.value = 0;
         return;
     }
@@ -479,7 +479,7 @@ export class LayeredMaterial extends THREE.ShaderMaterial {
         };
     }
 
-    public updateLayersUniforms(): void {
+    public updateLayersUniforms(renderer: THREE.WebGLRenderer): void {
         const colorlayers = this.colorTiles
             .filter(rt => rt.visible && rt.opacity > 0);
         colorlayers.sort((a, b) =>
@@ -487,6 +487,7 @@ export class LayeredMaterial extends THREE.ShaderMaterial {
         );
 
         updateLayersUniforms(
+            renderer,
             this.getLayerUniforms('color'),
             colorlayers,
             this.defines.NUM_FS_TEXTURES,
@@ -496,6 +497,7 @@ export class LayeredMaterial extends THREE.ShaderMaterial {
         if (this.elevationTileId !== undefined && this.getElevationTile()) {
             if (this.elevationTile !== undefined) {
                 updateLayersUniforms(
+                    renderer,
                     this.getLayerUniforms('elevation'),
                     [this.elevationTile],
                     this.defines.NUM_VS_TEXTURES,

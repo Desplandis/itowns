@@ -138,12 +138,12 @@ function getInternalFormat(
  * @returns True if the function succeeded
  */
 export function makeDataArrayTexture(
+    renderer: THREE.WebGLRenderer,
     uTextures: THREE.IUniform, width: number, height: number, count: number, tiles: RasterTile[],
     max: number,
 ): boolean {
     if (count === 0) { return false; }
 
-    const renderer: THREE.WebGLRenderer = view.renderer;
     const gl = renderer.getContext();
     if (!('TEXTURE_2D_ARRAY' in gl && 'texStorage3D' in gl)) {
         console.error('Some WebGL features are missing');

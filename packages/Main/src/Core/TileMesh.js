@@ -106,8 +106,8 @@ class TileMesh extends THREE.Mesh {
         }
     }
 
-    onBeforeRender() {
-        this.material.updateLayersUniforms();
+    onBeforeRender(renderer) {
+        this.material.updateLayersUniforms(renderer);
     }
 }
 
