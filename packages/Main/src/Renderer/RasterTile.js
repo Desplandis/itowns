@@ -153,6 +153,8 @@ export class RasterTile extends THREE.EventDispatcher {
 }
 
 export class RasterColorTile extends RasterTile {
+    isRasterColorTile = true;
+
     get effect_type() {
         return this.layer.effect_type;
     }
@@ -165,6 +167,8 @@ export class RasterColorTile extends RasterTile {
 }
 
 export class RasterElevationTile extends RasterTile {
+    isRasterElevationTile = true;
+
     constructor(layer) {
         super(layer);
         const defaultEle = {

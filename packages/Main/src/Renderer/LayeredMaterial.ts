@@ -5,7 +5,7 @@ import ShaderUtils from 'Renderer/Shader/ShaderUtils';
 import Capabilities from 'Core/System/Capabilities';
 import RenderMode from 'Renderer/RenderMode';
 import { RasterTile, RasterElevationTile, RasterColorTile } from './RasterTile';
-import { makeDataArrayTexture } from './WebGLComposer';
+import { makeDataArrayTexture2 } from './WebGLComposer';
 
 const identityOffsetScale = new THREE.Vector4(0.0, 0.0, 1.0, 1.0);
 const defaultTex = new THREE.Texture();
@@ -97,6 +97,7 @@ function updateLayersUniforms<Type extends 'c' | 'e'>(
     max: number,
     type: Type,
 ) {
+    // console.log('updateLayersUniforms', type);
     // Aliases for readability
     const uLayers = uniforms.layers.value;
     const uTextures = uniforms.textures;
@@ -147,16 +148,60 @@ function updateLayersUniforms<Type extends 'c' | 'e'>(
     }
 
     if (textureArraysCache.has(textureSetId)) {
-        uTextures.value = textureArraysCache.get(textureSetId);
+        const cached = textureArraysCache.get(textureSetId);
+        uTextures.value = cached;
         uTextureCount.value = count;
-        renderer.initTexture(uTextures.value);
+        // renderer.initTexture(uTextures.value);
+        // console.log('---- Cached', cached?.source); // Always data = null, WTF?
         return;
     }
 
-    if (!makeDataArrayTexture(renderer, uTextures, width, height, count, tiles, max)) {
+    /*
+    if (!Array.isArray(uTextures.value)) {
+        let arrayTexture = uTextures.value;
+
+        if (arrayTexture.image.depth !== count && count !== 0) {
+            arrayTexture.dispose();
+            arrayTexture = new THREE.DataArrayTexture(null, width, height, count);
+            arrayTexture.magFilter = THREE.LinearFilter;
+            arrayTexture.minFilter = THREE.LinearFilter;
+            arrayTexture.wrapS = THREE.RepeatWrapping;
+            arrayTexture.wrapT = THREE.RepeatWrapping;
+            arrayTexture.flipY = true;
+            arrayTexture.source.dataReady = false;
+            arrayTexture.needsUpdate = true;
+            arrayTexture.onUpdate = () => {
+                console.log('onUpdate');
+                let currentLayerIndex = 0;
+                for (const tile of tiles) {
+                    for (
+                        let i = 0;
+                        i < tile.textures.length && count < max;
+                        ++i, ++count
+                    ) {
+                        const texture = tile.textures[i];
+                        if (!texture) { continue; }
+
+                        console.log(uOffsetScales[count]);
+                        console.log(uniforms);
+
+                        // console.log(i, currentLayerIndex);
+                        renderer.copyTextureToTexture(texture, arrayTexture, null, null, 0, count);
+                    }
+                }
+                console.log('--------------------------------');
+            };
+            uTextures.value = arrayTexture;
+        }
+    }
+    */
+    if (!makeDataArrayTexture2(renderer, uTextures, width, height, count, tiles, max)) {
         uTextureCount.value = 0;
+        // console.log('---- Failed');
         return;
     }
+
+    // console.log(uTextures.value); // Always data = null, WTF?
 
     if (textureArraysCache.size >= TEXTURE_ARRAY_CACHE_CAPACITY) {
         const oldestEntry = textureArraysCache.entries().next().value!;
@@ -172,6 +217,8 @@ function updateLayersUniforms<Type extends 'c' | 'e'>(
         );
     }
     uTextureCount.value = count;
+
+    // console.log('----');
 }
 
 export const ELEVATION_MODES = {
@@ -486,7 +533,7 @@ export class LayeredMaterial extends THREE.ShaderMaterial {
             this.colorTileIds.indexOf(a.id) - this.colorTileIds.indexOf(b.id),
         );
 
-        updateLayersUniforms(
+        updateLayersUniforms.bind(this)(
             renderer,
             this.getLayerUniforms('color'),
             colorlayers,
@@ -496,7 +543,7 @@ export class LayeredMaterial extends THREE.ShaderMaterial {
 
         if (this.elevationTileId !== undefined && this.getElevationTile()) {
             if (this.elevationTile !== undefined) {
-                updateLayersUniforms(
+                updateLayersUniforms.bind(this)(
                     renderer,
                     this.getLayerUniforms('elevation'),
                     [this.elevationTile],

@@ -23,7 +23,63 @@ const copyTextureShader = {
 let renderTarget: THREE.WebGLRenderTarget | null = null;
 let material: THREE.ShaderMaterial | null = null;
 let quadScene: THREE.Scene | null = null;
-let quadCam: THREE.OrthographicCamera | null = null;
+const quadCam: THREE.OrthographicCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+function initQuad() {
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    const material = new THREE.ShaderMaterial({
+        uniforms: {
+            // This uniform will be updated with each source 2D texture
+            sourceTexture: { value: null },
+        },
+        vertexShader: copyTextureShader.vertexShader,
+        fragmentShader: copyTextureShader.fragmentShader,
+    });
+    const quad = new THREE.Mesh(geometry, material);
+    return quad; // Or just FullscreenQuad?
+}
+
+function drawTextureLayer2(
+    renderer: THREE.WebGLRenderer,
+    renderTarget: THREE.WebGLRenderTarget,
+    layerIndex: number,
+    quad: THREE.Mesh,
+) {
+    const previousRenderTarget = renderer.getRenderTarget();
+    renderer.setRenderTarget(renderTarget, layerIndex);
+    renderer.render(quad, quadCam);
+    renderer.setRenderTarget(previousRenderTarget);
+}
+
+export function makeDataArrayTexture2(
+    renderer: THREE.WebGLRenderer,
+    uTextures: THREE.IUniform, width: number, height: number, count: number, tiles: RasterTile[],
+    max: number,
+): boolean {
+    const renderTarget = new THREE.WebGLArrayRenderTarget(width, height, count, {
+        depthBuffer: false,
+    });
+    const quad = initQuad();
+    let currentLayerIndex = 0;
+    for (const tile of tiles) {
+        for (
+            let i = 0;
+            i < tile.textures.length && currentLayerIndex < max;
+            ++i, ++currentLayerIndex
+        ) {
+            const texture = tile.textures[i];
+            if (!texture) { continue; }
+
+            // Set the current source 2D texture on the quad's material
+            quad.material.uniforms.sourceTexture.value = texture;
+
+            // render this source texture into the current layer
+            drawTextureLayer2(renderer, renderTarget, currentLayerIndex, quad);
+        }
+    }
+    uTextures.value = renderTarget.texture;
+    return true;
+}
 
 /**
  * Renders a single 2D texture layer into the DataArrayTexture on the GPU.
@@ -68,7 +124,7 @@ function drawTextureLayer(
         return;
     }
 
-    renderer.render(quadScene, quadCam);
+    renderer.render(quadScene, quadCam); // You could directly render the object
 
     // reset render target to the old one
     renderer.setRenderTarget(previousRenderTarget);
@@ -176,7 +232,6 @@ export function makeDataArrayTexture(
     // Set up the quad for rendering
     if (!quadScene) {
         quadScene = new THREE.Scene();
-        quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
         const geometry = new THREE.PlaneGeometry(2, 2);
         material = new THREE.ShaderMaterial({
             uniforms: {
