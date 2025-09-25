@@ -125,17 +125,14 @@ class TileMesh extends THREE.Mesh<TileGeometry, LayeredMaterial> {
             if (tile.id == this.id) {
                 return tile;
             } else if (tile.level != 0) {
-                // @ts-expect-error By invariant, parent is always a TileMesh
-                return this.parent.findCommonAncestor(tile.parent);
+                return (this.parent as TileMesh)?.findCommonAncestor(tile.parent as TileMesh);
             } else {
                 return undefined;
             }
         } else if (tile.level < this.level) {
-            // @ts-expect-error By invariant, parent is always a TileMesh
-            return this.parent.findCommonAncestor(tile);
+            return (this.parent as TileMesh)?.findCommonAncestor(tile as TileMesh);
         } else {
-            // @ts-expect-error By invariant, parent is always a TileMesh
-            return this.findCommonAncestor(tile.parent);
+            return this.findCommonAncestor(tile.parent as TileMesh);
         }
     }
 
