@@ -10,6 +10,8 @@ import type { LayeredMaterialParameters } from 'Renderer/LayeredMaterial';
 
 const dimensions = new THREE.Vector2();
 
+// A simplified interface for TiledGeometryLayer.
+// It is used to avoid a dependency on the full TiledGeometryLayer type.
 interface TileLayerLike {
     diffuse: THREE.Color;
     showOutline: boolean;
