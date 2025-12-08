@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import TinyQueue from 'tinyqueue';
 import GeometryLayer from 'Layer/GeometryLayer';
 import PointsMaterial, { PNTS_MODE } from 'Renderer/PointsMaterial';
 import Picking from 'Core/Picking';
@@ -440,8 +441,8 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
                 layer.pointSize,
                 elt.pointSpacing,
                 distanceToCamera,
-            ) / this.sseThreshold;
-            if (elt.sse >= 1) {
+            );
+            if (elt.sse >= this.sseThreshold) {
                 return elt.children;
             } else {
                 for (const child of elt.children) {
