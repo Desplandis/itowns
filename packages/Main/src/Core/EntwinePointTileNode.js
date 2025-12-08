@@ -101,6 +101,14 @@ class EntwinePointTileNode extends PointCloudNode {
         });
     }
 
+    async load() {
+        // Query octree/HRC if we don't have children potreeNode yet.
+        if (!this.octreeIsLoaded) {
+            await this.loadOctree();
+        }
+        return super.load();
+    }
+
     findAndCreateChild(depth, x, y, z, hierarchy, stack) {
         const voxelKey = buildVoxelKey(depth, x, y, z);
         const numPoints = hierarchy[voxelKey];

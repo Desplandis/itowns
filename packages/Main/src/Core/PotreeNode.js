@@ -99,7 +99,11 @@ class PotreeNode extends PointCloudNode {
     networkOptions() {
     }
 
-    load() {
+    async load() {
+        // Query octree/HRC if we don't have children potreeNode yet.
+        if (!this.octreeIsLoaded) {
+            await this.loadOctree();
+        }
         return super.load(this.networkOptions());
     }
 

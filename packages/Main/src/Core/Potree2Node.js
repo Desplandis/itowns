@@ -51,6 +51,9 @@ class Potree2Node extends PotreeNode {
     }
 
     networkOptions(byteOffset = this.byteOffset, byteSize = this.byteSize) {
+        if (byteOffset === undefined || byteSize === undefined) {
+            throw new Error('Potree2Node: network options called before hierarchy is loaded');
+        }
         const first = byteOffset;
         const last = first + byteSize - 1n;
 
