@@ -16,17 +16,10 @@ export interface PointCloudSource {
 
 type ExtentedOBB = OBB & { matrixWorldInverse: THREE.Matrix4 };
 
-/**
- * @property {number} numPoints - The number of points in this node.
- * @property {PointCloudSource} source - Data source of the node.
- * @property {string} crs - The crs of the node.
- * @property {PointCloudNode[]} children - The children nodes of this node.
- * @property {OBB} voxelOBB - The node cubique obb.
- * @property {OBB} clampOBB - The cubique obb clamped to zmin and zmax.
- * @property {number} sse - The sse of the node set at an nitial value of -1.
- */
 abstract class PointCloudNode extends THREE.EventDispatcher {
+    /** The crs of the node. */
     abstract crs: string;
+    /** Data source of the node. */
     abstract source: PointCloudSource;
 
     x: number;
@@ -34,15 +27,20 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
     z: number;
     depth: number;
 
+    /** The number of points in this node. */
     numPoints: number;
+    /** The children nodes of this node. */
     children: this[];
     parent: this | undefined;
 
+    /** The node cubique obb. */
     voxelOBB: ExtentedOBB;
+    /** The cubique obb clamped to zmin and zmax. */
     clampOBB: ExtentedOBB;
 
     // Properties used internally by PointCloud layer
     visible: boolean;
+    /** The sse of the node set at an initial value of -1. */
     sse: number;
     notVisibleSince: number | undefined;
     promise: Promise<unknown> | null;
@@ -93,7 +91,8 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
         return this._center;
     }
 
-    // the origin is the center of the bounding box projected on the z=O local plan, in the world referential.
+    // the origin is the center of the bounding box projected on the z=O local
+    // plan, in the world referential.
     get origin() {
         if (this._origin != undefined) { return this._origin; }
         const proj = proj4(this.crs, this.source.crs);
@@ -104,15 +103,15 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
     }
 
     /**
-     * get the rotation between the local referentiel and the geocentrique one (if appliable).
-     *
-     * @returns {THREE.Quaternion}
+     * Get the rotation between the local referentiel and the geocentrique
+     * one (if appliable).
      */
     get rotation(): THREE.Quaternion {
         if (this._rotation != undefined) { return this._rotation; }
         this._rotation = new THREE.Quaternion();
         if (proj4.defs(this.crs).projName === 'geocent') {
-            this._rotation = OrientationUtils.quaternionFromCRSToCRS(this.crs, this.source.crs)(this.origin);
+            this._rotation =
+                OrientationUtils.quaternionFromCRSToCRS(this.crs, this.source.crs)(this.origin);
         }
         return this._rotation;
     }
@@ -200,7 +199,7 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
     /**
      * Create an (A)xis (A)ligned (B)ounding (B)ox for the given node given
      * `this` is its parent.
-     * @param {CopcNode} childNode - The child node
+     * @param childNode - The child node
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     createChildAABB(childNode: this, _indexChild: number) {
