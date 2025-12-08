@@ -3,6 +3,18 @@ import Picking from 'Core/Picking';
 import { CACHE_POLICIES } from 'Core/Scheduler/Cache';
 import ObjectRemovalHelper from 'Process/ObjectRemovalHelper';
 
+export function* depthFirstTraversal(context, layer, nodes) {
+    if (!nodes) {
+        return;
+    }
+
+    for (const node of nodes) {
+        const children = layer.update(context, layer, node);
+        yield node;
+        yield* depthFirstTraversal(context, layer, children);
+    }
+}
+
 /**
  * Fires when the opacity of the layer has changed.
  * @event GeometryLayer#opacity-property-changed
@@ -149,6 +161,10 @@ class GeometryLayer extends Layer {
                 parent: obj.parent,
             };
         }
+    }
+
+    iterator(context, nodes) {
+        return depthFirstTraversal(context, this, nodes);
     }
 
     // Placeholder

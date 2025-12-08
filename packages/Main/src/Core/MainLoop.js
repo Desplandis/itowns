@@ -28,16 +28,11 @@ export const MAIN_LOOP_EVENTS = {
     UPDATE_END: 'update_end',
 };
 
-function updateElements(context, geometryLayer, elements) {
-    if (!elements) {
-        return;
-    }
-    for (const element of elements) {
+function updateElements(context, geometryLayer, it) {
+    for (const element of it) {
         // update element
         // TODO find a way to notify attachedLayers when geometryLayer deletes some elements
         // and then update Debug.js:addGeometryLayerDebugFeatures
-        const newElementsToUpdate = geometryLayer.update(context, geometryLayer, element);
-
         const sub = geometryLayer.getObjectToUpdateForAttachedLayers(element);
 
         if (sub) {
@@ -71,7 +66,6 @@ function updateElements(context, geometryLayer, elements) {
                 }
             }
         }
-        updateElements(context, geometryLayer, newElementsToUpdate);
     }
 }
 
@@ -153,7 +147,8 @@ class MainLoop extends EventDispatcher {
                     // `preUpdate` returns an array of elements to update
                     const elementsToUpdate = geometryLayer.preUpdate(context, srcs);
                     // `update` is called in `updateElements`.
-                    updateElements(context, geometryLayer, elementsToUpdate);
+                    const it = geometryLayer.iterator(context, elementsToUpdate);
+                    updateElements(context, geometryLayer, it);
                     // `postUpdate` is called when this geom layer update process is finished
                     geometryLayer.postUpdate(context, geometryLayer, updateSources);
                 }
