@@ -9,6 +9,8 @@ import type PointCloudNode from 'Core/PointCloudNode';
 const point = new THREE.Vector3();
 const bboxMesh = new THREE.Mesh();
 const box3 = new THREE.Box3();
+const worldSpaceBox = new THREE.Box3();
+const frustum = new THREE.Frustum();
 bboxMesh.geometry.boundingBox = box3;
 
 interface PointCloudSource {
@@ -54,8 +56,78 @@ interface Context {
         }) => Promise<THREE.Points>;
     };
     view: object;
+    numPoints: number;
 }
 
+function updateCameraFrustum(camera: THREE.PerspectiveCamera) {
+    camera.updateMatrixWorld();
+    return frustum.setFromProjectionMatrix(camera.projectionMatrix);
+}
+
+function recalculateNode(
+    node: PointCloudNode,
+    layer: PointCloudLayer,
+    context: Context,
+    cameraFrustum: THREE.Frustum,
+) {
+    const object3d = node.clampOBB;
+    const bbox = object3d.box3D;
+    point.copy(context.camera.camera3D.position).applyMatrix4(object3d.matrixWorldInverse);
+    const distanceToCamera = bbox.distanceToPoint(point);
+    node.distanceFromCamera = distanceToCamera;
+    worldSpaceBox.copy(bbox).applyMatrix4(object3d.matrixWorld);
+    node.visible = cameraFrustum.intersectsBox(worldSpaceBox);
+}
+
+function setupTraversal(
+    node: PointCloudNode,
+    layer: PointCloudLayer,
+    context: Context,
+    cameraFrustum: THREE.Frustum,
+) {
+    if (!node) {
+        return;
+    }
+
+    node.sse = +Infinity;
+    node.distanceFromCamera = +Infinity;
+    recalculateNode(node, layer, context, cameraFrustum);
+
+    for (const child of node.children) {
+        setupTraversal(child, layer, context, cameraFrustum);
+    }
+}
+
+function* priorityTraversal(context: Context, layer: PointCloudLayer, nodes: PointCloudNode[]) {
+    if (!nodes || !layer.root) {
+        return;
+    }
+
+    const cameraFrustum = updateCameraFrustum(context.camera.camera3D);
+    setupTraversal(layer.root, layer, context, cameraFrustum);
+
+    const priorityQueue = new TinyQueue(nodes, (a, b) => {
+        if (a.visible !== b.visible) {
+            return a.visible ? 1 : -1;
+        }
+        if (a.distanceFromCamera !== b.distanceFromCamera) {
+            return a.distanceFromCamera > b.distanceFromCamera ? 1 : -1;
+        }
+        return 0;
+    });
+
+    while (priorityQueue.length > 0) {
+        const node = priorityQueue.pop() as PointCloudNode;
+        const children = layer.update(context, layer, node);
+        if (!children) {
+            continue;
+        }
+        for (const child of children) {
+            priorityQueue.push(child);
+        }
+        yield node;
+    }
+}
 function computeSSEPerspective(
     context: Context,
     pointSize: number,
@@ -400,6 +472,7 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
 
         // only load geometry if this elements has points
         if (elt.numPoints !== 0) {
+            context.numPoints += elt.numPoints;
             if (elt.obj) {
                 elt.obj.visible = true;
             } else if (!elt.promise) {
@@ -453,6 +526,21 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
         }
     }
 
+    iterator(context: Context, nodes: PointCloudNode[]) {
+        const ctx = {
+            ...context,
+            numPoints: 0,
+        };
+        /*
+        console.log('ITERATOR', nodes.map((node) => {
+            const id = node instanceof PointCloudNode ? 'root' : node.id;
+            return id;
+        }));
+        */
+        // TODO: Count the number of points from nodes to root
+        return priorityTraversal(ctx, this, nodes);
+    }
+
     /**
      * Check if the node need to be rendered. In that case it call the
      * node.loadData() on it.
@@ -482,6 +570,7 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
         }
 
         elt.visible = context.camera.isBox3Visible(bbox, object3d.matrixWorld);
+        elt.visible = elt.visible && (context.numPoints <= this.pointBudget || elt.numPoints <= 0);
 
         if (!elt.visible) {
             markForDeletion(elt);
@@ -550,7 +639,6 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
             if (!obj.visible && (now - obj.userData.node.notVisibleSince) > 10000) {
                 // remove from group
                 this.group.children.splice(i, 1);
-
                 // no need to dispose obj.material, as it is shared by all
                 // objects of this layer
                 obj.geometry.dispose();

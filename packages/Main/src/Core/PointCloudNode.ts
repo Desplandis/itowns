@@ -45,6 +45,7 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
     notVisibleSince: number | undefined;
     promise: Promise<unknown> | null;
     obj: THREE.Points | undefined;
+    distanceFromCamera: number;
 
     private _center: Coordinates | undefined;
     private _origin: Coordinates | undefined;
@@ -69,6 +70,7 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
 
         this.visible = false;
         this.promise = null;
+        this.distanceFromCamera = Infinity;
     }
 
     abstract get octreeIsLoaded(): boolean;
