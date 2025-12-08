@@ -11,6 +11,7 @@ interface CopcLayerParameters extends PointCloudLayerParameters {
  * See {@link PointCloudLayer} class for documentation on base properties.
  *
  * @example
+ * ```ts
  * // Create a new COPC layer
  * const copcSource = new CopcSource({
  *     url: 'https://s3.amazonaws.com/hobu-lidar/autzen-classified.copc.laz',
@@ -23,6 +24,7 @@ interface CopcLayerParameters extends PointCloudLayerParameters {
  * });
  *
  * View.prototype.addLayer.call(view, copcLayer);
+ * ```
  */
 class CopcLayer extends PointCloudLayer {
     readonly isCopcLayer: true;

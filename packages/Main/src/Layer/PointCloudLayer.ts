@@ -136,24 +136,9 @@ function changeAngleRange(layer: PointCloudLayer) {
 
 /**
  * The basis for all point clouds related layers.
- *
- * @property {THREE.Material|PointsMaterial} [material=new PointsMaterial] - The
- * material to use to display the points of the cloud. Be default it is a new
- * `PointsMaterial`.
- * @property {number} [mode=PNTS_MODE.COLOR] - The displaying mode of the points.
- * Values are specified in `PointsMaterial`.
- * @property {number} [minIntensityRange=0] - The minimal intensity of the
- * layer. Changing this value will affect the material, if it has the
- * corresponding uniform. The value is normalized between 0 and 1.
- * @property {number} [maxIntensityRange=1] - The maximal intensity of the
- * layer. Changing this value will affect the material, if it has the
- * corresponding uniform. The value is normalized between 0 and 1.
- * @property {number} zmin - The minimal value for elevation (read from the metadata).
- * @property {number} zmax - The maximal value for elevation (read from the metadata).
- *
- * @extends GeometryLayer
  */
-abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource> extends GeometryLayer {
+abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
+    extends GeometryLayer {
     /**
      * Read-only flag to assert that a given object is of type PointCloudLayer.
      * Used internally for optimisation.
@@ -206,9 +191,17 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource> ex
      */
     sseThreshold: number;
 
-    /** Minimal intensity value of the layer. */
+    /**
+     * The minimal intensity of the layer. Changing this value will affect the
+     * material, if it has the corresponding uniform. The value is normalized
+     * between 0 and 1.
+     */
     minIntensityRange!: number;
-    /** Maximal intensity value of the layer. */
+    /**
+     * The maximal intensity of the layer. Changing this value will affect the
+     * material, if it has the corresponding uniform. The value is normalized
+     * between 0 and 1.
+     */
     maxIntensityRange!: number;
     /** Minimal elevation value of the layer. */
     minElevationRange!: number;
@@ -231,24 +224,24 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource> ex
     /** Root node of the point cloud tree. */
     root: PointCloudNode | undefined;
 
+    /**
+     * The material to use to display the points of the cloud. By default it is
+     * a new `PointsMaterial`.
+     */
     material: THREE.PointsMaterial;
 
     /**
-     * Constructs a new instance of point cloud layer.
      * Constructs a new instance of a Point Cloud Layer. This should not be used
      * directly, but rather implemented using `extends`.
      *
-     * @param {string} id - The id of the layer, that should be unique. It is
+     * @param id - The id of the layer, that should be unique. It is
      * not mandatory, but an error will be emitted if this layer is added a
      * {@link View} that already has a layer going by that id.
-     * @param {Object} [config] - Optional configuration, all elements in it
+     * @param config - Optional configuration, all elements in it
      * will be merged as is in the layer. For example, if the configuration
      * contains three elements `name, protocol, extent`, these elements will be
      * available using `layer.name` or something else depending on the property
      * name. See the list of properties to know which one can be specified.
-     * @param {Source} config.source - Description and options of the source See @Layer.
-     * @param {number}  [options.minElevationRange] - Min value for the elevation range (default value will be taken from the source.metadata).
-     * @param {number}  [options.maxElevationRange] - Max value for the elevation range (default value will be taken from the source.metadata).
      */
     constructor(id: string, config: PointCloudLayerParameters) {
         const {
@@ -302,20 +295,26 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource> ex
         this.material = material;
         if (!this.material.isMaterial) {
             // @ts-expect-error PointsMaterial is not typed yet
-            this.material.intensityRange = new THREE.Vector2(this.minIntensityRange, this.maxIntensityRange);
+            this.material.intensityRange = new THREE.Vector2(
+                this.minIntensityRange,
+                this.maxIntensityRange,
+            );
             // @ts-expect-error PointsMaterial is not typed yet
-            this.material.elevationRange = new THREE.Vector2(this.minElevationRange, this.maxElevationRange);
+            this.material.elevationRange = new THREE.Vector2(
+                this.minElevationRange,
+                this.maxElevationRange,
+            );
             // @ts-expect-error PointsMaterial is not typed yet
-            this.material.angleRange = new THREE.Vector2(this.minAngleRange, this.maxAngleRange);
+            this.material.angleRange = new THREE.Vector2(
+                this.minAngleRange,
+                this.maxAngleRange,
+            );
             // @ts-expect-error PointsMaterial is not typed yet
             this.material = new PointsMaterial(this.material);
         }
 
         // @ts-expect-error PointsMaterial is not typed yet
         this.material.mode = mode || PNTS_MODE.COLOR;
-        /**
-         * @type {PointCloudNode | undefined}
-         */
         this.root = undefined;
 
         this.displayedCount = 0;
@@ -389,12 +388,11 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource> ex
      * Check the visiblility of children to see if the need to be updated
      * as well.
      *
-     * @param {PointCloudNode} elt - The element (node) to load data.
-     * @param {Object} context - The context.
-     * @param {PointCloudLayer} layer - The layer on wich the node is attach.
-     * @param {THREE.Box3} distanceToCamera - The distance between the camera and the node.
-     *
-     * @return {pointCloudNode[]} The child nodes to update (if needed).
+     * @param elt - The element (node) to load data.
+     * @param context - The context.
+     * @param layer - The layer on which the node is attached.
+     * @param distanceToCamera - The distance between the camera and the node.
+     * @returns The child nodes to update (if needed).
      */
     loadData(elt: PointCloudNode, context: Context, layer: this, distanceToCamera: number) {
         elt.notVisibleSince = undefined;
@@ -406,7 +404,12 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource> ex
             } else if (!elt.promise) {
                 const distance = Math.max(0.001, distanceToCamera);
                 // Increase priority of nearest node
-                const priority = computeScreenSpaceError(context, layer.pointSize, elt.pointSpacing, distance) / distance;
+                const priority = computeScreenSpaceError(
+                    context,
+                    layer.pointSize,
+                    elt.pointSpacing,
+                    distance,
+                ) / distance;
                 elt.promise = context.scheduler.execute({
                     layer,
                     requester: elt,
@@ -432,7 +435,12 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource> ex
         }
 
         if (elt.children && elt.children.length) {
-            elt.sse = computeScreenSpaceError(context, layer.pointSize, elt.pointSpacing, distanceToCamera) / this.sseThreshold;
+            elt.sse = computeScreenSpaceError(
+                context,
+                layer.pointSize,
+                elt.pointSpacing,
+                distanceToCamera,
+            ) / this.sseThreshold;
             if (elt.sse >= 1) {
                 return elt.children;
             } else {
@@ -448,11 +456,10 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource> ex
      * Check if the node need to be rendered. In that case it call the
      * node.loadData() on it.
      *
-     * @param {Object} context - The context.
-     * @param {PointCloudLayer} layer - The layer on wich the node is attach.
-     * @param {PointCloudNode} elt - The element (node) to render.
-     *
-     * @return {pointCloudNode[]} The child nodes to update or [] if ther is none.
+     * @param context - The context.
+     * @param layer - The layer on which the node is attached.
+     * @param elt - The element (node) to render.
+     * @returns The child nodes to update or [] if there is none.
      */
     update(context: Context, layer: this, elt: PointCloudNode) {
         elt.visible = false;
@@ -498,11 +505,12 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource> ex
         }
 
         if (this.displayedCount > this.pointBudget) {
-            // 2 different point count limit implementation, depending on the potree source
+            // 2 different point count limit implementation, depending on the
+            // potree source
             if (this.supportsProgressiveDisplay) {
                 // In this format, points are evenly distributed within a node,
-                // so we can draw a percentage of each node and still get a correct
-                // representation
+                // so we can draw a percentage of each node and still get a
+                // correct representation
                 const reduction = this.pointBudget / this.displayedCount;
                 for (const pts of this.group.children as THREE.Points[]) {
                     if (pts.visible) {
@@ -516,9 +524,9 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource> ex
                 }
                 this.displayedCount *= reduction;
             } else {
-                // This format doesn't require points to be evenly distributed, so
-                // we're going to sort the nodes by "importance" (= on screen size)
-                // and display only the first N nodes
+                // This format doesn't require points to be evenly distributed,
+                // so we're going to sort the nodes by "importance" (= on
+                // screen size) and display only the first N nodes
                 this.group.children.sort((p1, p2) => p2.userData.node.sse - p1.userData.node.sse);
 
                 let limitHit = false;
@@ -542,7 +550,8 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource> ex
                 // remove from group
                 this.group.children.splice(i, 1);
 
-                // no need to dispose obj.material, as it is shared by all objects of this layer
+                // no need to dispose obj.material, as it is shared by all
+                // objects of this layer
                 obj.geometry.dispose();
                 obj.userData.node.obj = null;
             }
