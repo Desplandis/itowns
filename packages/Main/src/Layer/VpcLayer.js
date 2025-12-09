@@ -87,6 +87,7 @@ class VpcLayer extends PointCloudLayer {
                     waitingForSource: true,
                     source,
                     crs: this.crs,
+                    id: `mockRoot-${i}`,
                 };
                 PointCloudNode.prototype.setOBBes.call(mockRoot, boundsConforming.slice(0, 3), boundsConforming.slice(3, 6));
 
@@ -111,7 +112,7 @@ class VpcLayer extends PointCloudLayer {
         });
     }
 
-    loadData(elt, context, layer, bbox) {
+    async loadData(elt, context, layer, bbox) {
         if (elt.waitingForSource) {
             layer.source.instantiate(elt.source);
             elt.loadOctree
