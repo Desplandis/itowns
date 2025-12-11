@@ -10,6 +10,7 @@ const point = new THREE.Vector3();
 const bboxMesh = new THREE.Mesh();
 const box3 = new THREE.Box3();
 bboxMesh.geometry.boundingBox = box3;
+const tmpMatrix = new THREE.Matrix4();
 
 export interface PointCloudSource {
     zmin: number;
@@ -513,7 +514,8 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource> ex
             const bbox = node.voxelOBB.box3D;
             const object3d = node.voxelOBB;
 
-            node.visible = context.camera.isBox3Visible(bbox, object3d.matrixWorld);
+            tmpMatrix.multiplyMatrices(this.object3d.matrixWorld, object3d.matrixWorld);
+            node.visible = context.camera.isBox3Visible(bbox, tmpMatrix);
             // console.log('node 3', node.id, node.visible);
             node.visible = node.visible && numVisiblePoints + node.numPoints <= this.pointBudget;
             // console.log('node 4', node.id, node.visible);
@@ -533,7 +535,9 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource> ex
 
             numVisiblePoints += node.numPoints;
 
-            point.copy(context.camera.camera3D.position).applyMatrix4(object3d.matrixWorldInverse);
+            tmpMatrix.multiplyMatrices(this.object3d.matrixWorld, object3d.matrixWorld);
+            tmpMatrix.invert();
+            point.copy(context.camera.camera3D.position).applyMatrix4(tmpMatrix);
             const distanceToCamera = bbox.distanceToPoint(point);
 
             this.loadData(node, context, layer, distanceToCamera);
