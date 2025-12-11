@@ -538,9 +538,16 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource> ex
 
             this.loadData(node, context, layer, distanceToCamera);
 
-            for (const child of node.children) {
-                const childWeight = computeObjectScreenSpace(context, child.voxelOBB);
-                stack.push({ node: child, weight: childWeight });
+            const sse = computeScreenSpaceError(context, layer.pointSize, node.pointSpacing, distanceToCamera);
+            if (sse >= layer.sseThreshold) {
+                for (const child of node.children) {
+                    const childWeight = computeObjectScreenSpace(context, child.voxelOBB);
+                    stack.push({ node: child, weight: childWeight + sse });
+                }
+            } else {
+                for (const child of node.children) {
+                    markForDeletion(child);
+                }
             }
         }
     }
