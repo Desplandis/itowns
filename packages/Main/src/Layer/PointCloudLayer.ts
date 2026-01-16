@@ -391,7 +391,9 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
                     this.group.add(elt.obj);
                     elt.obj.updateMatrixWorld(true);
                     context.view.notifyChange(this);
+                    this.dispatchEvent({ type: 'load-model', scene: pts, tile: elt });
                 }).catch((err: { isCancelledCommandException: boolean }) => {
+                    this.dispatchEvent({ type: 'load-error', tile: elt, error: err });
                     if (!err.isCancelledCommandException) {
                         return err;
                     }
@@ -426,6 +428,7 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
      * @returns The child nodes to update or [] if there is none.
      */
     update(context: Context, layer: this, elt: PointCloudNode): PointCloudNode[] {
+        const wasVisible = elt.visible;
         elt.visible = false;
 
         if (this.octreeDepthLimit >= 0 && this.octreeDepthLimit < elt.depth) {
@@ -445,6 +448,15 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
         }
 
         elt.visible = context.camera.isBox3Visible(bbox, object3d.matrixWorld);
+
+        if (wasVisible !== elt.visible) {
+            this.dispatchEvent({
+                type: 'tile-visibility-change',
+                scene: elt.obj,
+                tile: elt,
+                visible: elt.visible,
+            });
+        }
 
         if (!elt.visible) {
             markForDeletion(elt);
@@ -471,7 +483,8 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
         }
 
         if (this.displayedCount > this.pointBudget) {
-            // 2 different point count limit implementation, depending on the potree source
+            // 2 different point count limit implementation, depending on the
+            // potree source
             if (this.supportsProgressiveDisplay) {
                 // In this format, points are evenly distributed within a node,
                 // so we can draw a percentage of each node and still get a
@@ -515,9 +528,11 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
                 // remove from group
                 this.group.children.splice(i, 1);
 
-                // no need to dispose obj.material, as it is shared by all objects of this layer
+                // no need to dispose obj.material, as it is shared by all
+                // objects of this layer
                 obj.geometry.dispose();
                 obj.userData.node.obj = null;
+                this.dispatchEvent({ type: 'dispose-model', scene: obj, tile: obj.userData.node });
             }
         }
     }
