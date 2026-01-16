@@ -94,7 +94,7 @@
             loadCopc(url, options);
 
             function onLayerReady() {
-                var lookAt = layer.root.clampOBB.position;
+                var lookAt = layer.root.voxelOBB.position;
                 var coordLookAt = new itowns.Coordinates(view.referenceCrs).setFromVector3(lookAt);
 
                 var size = new THREE.Vector3();

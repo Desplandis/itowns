@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import GeometryLayer from 'Layer/GeometryLayer';
 import PointsMaterial, { PNTS_MODE } from 'Renderer/PointsMaterial';
 import Picking from 'Core/Picking';
-
+import type OBB from 'Renderer/OBB';
+import TinyQueue from 'tinyqueue';
 import type PointCloudNode from 'Core/PointCloudNode';
 
 const point = new THREE.Vector3();
@@ -119,6 +120,51 @@ function computeScreenSpaceError(
     }
 
     return computeSSEPerspective(context, pointSize, pointSpacing, distance);
+}
+
+function computeObjectScreenSpace(context: Context, object: OBB) {
+    // Update camera matrices
+    context.camera.camera3D.updateMatrixWorld();
+
+    // Get bounding sphere from the OBB's box3D
+    const box3 = object.box3D;
+    const sphere = new THREE.Sphere();
+    box3.getBoundingSphere(sphere);
+
+    // Transform sphere center to world space using the OBB's matrixWorld
+    const sphereCenterWorld = new THREE.Vector3();
+    sphereCenterWorld.copy(sphere.center);
+    sphereCenterWorld.applyMatrix4(object.matrixWorld);
+
+    // Get camera position in world space
+    const cameraPos = context.camera.camera3D.position;
+
+    // Calculate distance from camera to sphere center
+    const dx = cameraPos.x - sphereCenterWorld.x;
+    const dy = cameraPos.y - sphereCenterWorld.y;
+    const dz = cameraPos.z - sphereCenterWorld.z;
+    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+    // If camera is inside or very close to the sphere, return maximum weight
+    if (distance - sphere.radius < 0) {
+        return Infinity;
+    }
+
+    // Handle perspective camera (similar to Potree)
+    if (context.camera.camera3D instanceof THREE.PerspectiveCamera) {
+        const fov = (context.camera.camera3D.fov * Math.PI) / 180;
+        const slope = Math.tan(fov / 2);
+        const projFactor = (0.5 * context.camera.height) / (slope * distance);
+        const screenPixelRadius = sphere.radius * projFactor;
+
+        return screenPixelRadius;
+    } else {
+        // Handle orthographic camera
+        // For orthographic, we can use the diagonal of the box projected to
+        // screen
+        const diagonal = box3.max.clone().sub(box3.min).length();
+        return diagonal;
+    }
 }
 
 function markForDeletion(elt: PointCloudNode) {
@@ -365,7 +411,7 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
      */
     loadData(
         elt: PointCloudNode, context: Context, layer: this, distanceToCamera: number,
-    ): [] | PointCloudNode[] {
+    ) {
         elt.notVisibleSince = undefined;
 
         // only load geometry if this elements has points
@@ -385,12 +431,10 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
                     earlyDropFunction: cmd => !cmd.requester.visible || !this.visible,
                 }).then((pts: THREE.Points) => {
                     elt.obj = pts;
-                    elt.obj.visible = false;
                     // make sure to add it here, otherwise it might never
                     // be added nor cleaned
                     this.group.add(elt.obj);
                     elt.obj.updateMatrixWorld(true);
-                    context.view.notifyChange(this);
                     this.dispatchEvent({ type: 'load-model', scene: pts, tile: elt });
                 }).catch((err: { isCancelledCommandException: boolean }) => {
                     this.dispatchEvent({ type: 'load-error', tile: elt, error: err });
@@ -402,19 +446,6 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
                 });
             }
         }
-
-        if (elt.children && elt.children.length) {
-            elt.sse = computeScreenSpaceError(context, layer.pointSize, elt.pointSpacing, distanceToCamera) / this.sseThreshold;
-            if (elt.sse >= 1) {
-                return elt.children;
-            } else {
-                for (const child of elt.children) {
-                    markForDeletion(child);
-                }
-                return [];
-            }
-        }
-        return [];
     }
 
     /**
@@ -427,49 +458,62 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
      *
      * @returns The child nodes to update or [] if there is none.
      */
-    update(context: Context, layer: this, elt: PointCloudNode): PointCloudNode[] {
-        const wasVisible = elt.visible;
-        elt.visible = false;
+    update(context: Context, layer: this, root: PointCloudNode) {
+        root.traverse((node) => { node.visible = false; });
 
-        if (this.octreeDepthLimit >= 0 && this.octreeDepthLimit < elt.depth) {
-            markForDeletion(elt);
-            return [];
+        const rootWithWeight = { node: root, weight: Infinity };
+        const stack = new TinyQueue([rootWithWeight], (a, b) => {
+            if (b.weight < a.weight) {
+                return -1;
+            }
+            if (b.weight > a.weight) {
+                return 1;
+            }
+            return 0;
+        });
+        let numVisiblePoints = 0;
+        while (stack.length > 0) {
+            const { node } = stack.pop() as { node: PointCloudNode };
+            // console.log('node 1', node.id, node.visible);
+            if (this.octreeDepthLimit >= 0 && this.octreeDepthLimit < node.depth) {
+                markForDeletion(node);
+                continue;
+            }
+            // console.log('node 2', node.id, node.depth);
+
+            const bbox = node.voxelOBB.box3D;
+            const object3d = node.voxelOBB;
+
+            node.visible = context.camera.isBox3Visible(bbox, object3d.matrixWorld);
+            // console.log('node 3', node.id, node.visible);
+            node.visible = node.visible && numVisiblePoints + node.numPoints <= this.pointBudget;
+            // console.log('node 4', node.id, node.visible);
+
+            if (numVisiblePoints + node.numPoints > this.pointBudget) {
+                break;
+            }
+
+            // console.log('node 5', node.id, node.visible);
+
+            if (!node.visible) {
+                markForDeletion(node);
+                continue;
+            }
+
+            // console.log('node 6', node.id, node.visible);
+
+            numVisiblePoints += node.numPoints;
+
+            point.copy(context.camera.camera3D.position).applyMatrix4(object3d.matrixWorldInverse);
+            const distanceToCamera = bbox.distanceToPoint(point);
+
+            this.loadData(node, context, layer, distanceToCamera);
+
+            for (const child of node.children) {
+                const childWeight = computeObjectScreenSpace(context, child.voxelOBB);
+                stack.push({ node: child, weight: childWeight });
+            }
         }
-
-        // get object on which to measure distance
-        let bbox;
-        let object3d;
-        if (elt.obj) {
-            object3d = elt.obj;
-            bbox = object3d.geometry.boundingBox as THREE.Box3;
-        } else {
-            object3d = elt.clampOBB;
-            bbox = object3d.box3D;
-        }
-
-        elt.visible = context.camera.isBox3Visible(bbox, object3d.matrixWorld);
-
-        if (wasVisible !== elt.visible) {
-            this.dispatchEvent({
-                type: 'tile-visibility-change',
-                scene: elt.obj,
-                tile: elt,
-                visible: elt.visible,
-            });
-        }
-
-        if (!elt.visible) {
-            markForDeletion(elt);
-            return [];
-        }
-
-        // TODO: See if we can limit the calcul of the matrixWorlInverse.
-        point.copy(context.camera.camera3D.position)
-            .applyMatrix4(object3d.matrixWorld.clone().invert());
-
-        const distanceToCamera = bbox.distanceToPoint(point);
-
-        return this.loadData(elt, context, layer, distanceToCamera);
     }
 
     postUpdate() {
@@ -543,7 +587,7 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
     }
 
     // @ts-expect-error Layer is not typed yet
-    getObjectToUpdateForAttachedLayers(meta) {
+    getObjectToUpdateForAttachedLayers(meta: { obj: THREE.Points, parent: PointCloudNode }) {
         if (meta.obj) {
             const p = meta.parent;
             if (p && p.obj) {

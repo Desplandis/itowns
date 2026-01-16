@@ -21,6 +21,8 @@ class OBB extends THREE.Object3D {
     box3D: THREE.Box3;
     natBox: THREE.Box3;
     z: { min: number, max: number, scale: number, delta: number };
+    /** The inverse of matrixWorld, updated when updateMatrixWorld is called. */
+    matrixWorldInverse: THREE.Matrix4;
 
     /**
      * @param min - (optional) A {@link THREE.Vector3} representing the lower
@@ -38,6 +40,12 @@ class OBB extends THREE.Object3D {
         this.box3D = new THREE.Box3(min.clone(), max.clone());
         this.natBox = this.box3D.clone();
         this.z = { min: 0, max: 0, scale: 1.0, delta: 0 };
+        this.matrixWorldInverse = new THREE.Matrix4();
+    }
+
+    override updateMatrixWorld(force?: boolean): void {
+        super.updateMatrixWorld(force);
+        this.matrixWorldInverse.copy(this.matrixWorld).invert();
     }
 
     /**
@@ -52,6 +60,7 @@ class OBB extends THREE.Object3D {
         this.z.min = cOBB.z.min;
         this.z.max = cOBB.z.max;
         this.z.scale = cOBB.z.scale;
+        this.matrixWorldInverse.copy(cOBB.matrixWorldInverse);
         return this;
     }
 

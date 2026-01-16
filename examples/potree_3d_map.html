@@ -108,7 +108,7 @@
 
             // add potreeLayer to scene
             function onLayerReady() {
-                var lookAt = potreeLayer.root.clampOBB.position;
+                var lookAt = potreeLayer.root.voxelOBB.position;
 
                 var coordLookAt = new itowns.Coordinates(view.referenceCrs).setFromVector3(lookAt);
 

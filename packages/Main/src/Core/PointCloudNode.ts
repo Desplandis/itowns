@@ -13,8 +13,6 @@ export interface PointCloudSource {
     networkOptions: RequestInit;
 }
 
-type ExtentedOBB = OBB & { matrixWorldInverse: THREE.Matrix4 };
-
 abstract class PointCloudNode extends THREE.EventDispatcher {
     /** The crs of the node. */
     abstract crs: string;
@@ -30,9 +28,7 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
     parent: this | undefined;
 
     /** The node cubique obb. */
-    voxelOBB: ExtentedOBB;
-    /** The cubique obb clamped to zmin and zmax. */
-    clampOBB: ExtentedOBB;
+    voxelOBB: OBB;
 
     // Properties used internally by PointCloud layer
     visible: boolean;
@@ -56,8 +52,7 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
         this.children = [];
         this.parent = undefined;
 
-        this.voxelOBB = new OBB() as ExtentedOBB;
-        this.clampOBB = new OBB() as ExtentedOBB;
+        this.voxelOBB = new OBB();
         this.sse = -1;
 
         this.visible = false;
@@ -82,7 +77,7 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
         const centerBbox = new THREE.Vector3();
         this.voxelOBB.box3D.getCenter(centerBbox);
         this._center =  new Coordinates(this.crs)
-            .setFromVector3(centerBbox.applyMatrix4(this.clampOBB.matrix));
+            .setFromVector3(centerBbox.applyMatrix4(this.voxelOBB.matrix)); // TODO[QB]
         return this._center;
     }
 
@@ -129,8 +124,6 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
             in: root.source.crs,
             out: this.crs,
         };
-        const zmin = root.source.zmin;
-        const zmax = root.source.zmax;
 
         let forward = (x: [number, number, number]) => x;
         if (crs.in !== crs.out) {
@@ -180,17 +173,7 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
         root.voxelOBB.position.set(...origin);
         root.voxelOBB.quaternion.copy(rotation).invert();
 
-        root.voxelOBB.updateMatrix();
-
-        root.clampOBB.copy(root.voxelOBB);
-
-        const clampBBox = root.clampOBB.box3D;
-        if (clampBBox.min.z < zmax) {
-            clampBBox.max.z = Math.min(clampBBox.max.z, zmax);
-        }
-        if (clampBBox.max.z > zmin) {
-            clampBBox.min.z = Math.max(clampBBox.min.z, zmin);
-        }
+        root.voxelOBB.updateMatrixWorld(true);
     }
 
     add(node: this, indexChild: number): void {
@@ -210,6 +193,17 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
             return (this.parent as this).findCommonAncestor(node);
         } else {
             return this.findCommonAncestor(node.parent as this);
+        }
+    }
+
+    traverse(f: (node: this) => void) {
+        const stack = [this];
+        while (stack.length > 0) {
+            const node = stack.pop() as this;
+            f(node);
+            for (const child of node.children) {
+                stack.push(child);
+            }
         }
     }
 }

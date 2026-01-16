@@ -94,20 +94,7 @@ abstract class LasNodeBase extends PointCloudNode {
         // use the size computed above to set the max
         childVoxelBBox.max.copy(childVoxelBBox.min).add(size);
 
-        // get a clamped bbox from the voxel bbox
-        childNode.clampOBB.copy(childNode.voxelOBB);
-
-        const childClampBBox = childNode.clampOBB.box3D;
-
-        if (childClampBBox.min.z < this.source.zmax) {
-            childClampBBox.max.z = Math.min(childClampBBox.max.z, this.source.zmax);
-        }
-        if (childClampBBox.max.z > this.source.zmin) {
-            childClampBBox.min.z = Math.max(childClampBBox.min.z, this.source.zmin);
-        }
-
-        (this.clampOBB.parent as Group).add(childNode.clampOBB);
-        childNode.clampOBB.updateMatrixWorld(true);
+        childNode.voxelOBB.updateMatrixWorld(true);
     }
 }
 
