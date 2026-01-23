@@ -38,26 +38,42 @@ float shadow(float depth) {
     vec2 uvRadius = 1.0 / resolution;
 
     float sum = 0.0;
+    int validSamples = 0;
 
     vec2 uvNeighbour;
     float neighbourDepth;
+    float neighbourAlpha;
     for (int i = 0; i < KERNEL_SIZE; ++i) {
         uvNeighbour = vUv + uvRadius * kernel[i];
-        neighbourDepth = getLinearDepth(uvNeighbour);
 
-        sum += max(0.0, depth - neighbourDepth);
+        // Only consider neighbors that have actual point content (alpha > 0)
+        neighbourAlpha = texture2D(tDiffuse, uvNeighbour).a;
+        if (neighbourAlpha > 0.01) {
+            neighbourDepth = getLinearDepth(uvNeighbour);
+            sum += max(0.0, depth - neighbourDepth);
+            validSamples++;
+        }
     }
 
-    return sum / float(KERNEL_SIZE);
+    // Avoid division by zero; return 0 shadow if no valid neighbors
+    return validSamples > 0 ? sum / float(validSamples) : 0.0;
 }
 
 void main() {
+    vec4 color = texture2D(tDiffuse, vUv);
+
+    // Skip EDL for pixels with no point content
+    if (color.a < 0.01) {
+        gl_FragColor = color;
+        return;
+    }
+
     float depth = getLinearDepth(vUv);
     float res = shadow(depth);
 
     float edl = exp(- 300.0 * res * 6000.);
-    vec4 color = texture2D(tDiffuse, vUv);
 
+    // Apply EDL to RGB, modulated by alpha (so semi-transparent points get proportional EDL)
     gl_FragColor = vec4(color.rgb * edl, color.a);
 }
 

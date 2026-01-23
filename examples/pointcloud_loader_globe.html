@@ -75,7 +75,11 @@
 
             import { Vector3 } from 'three';
             import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+            import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+            import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
             import { EDLPass } from './jsm/postprocessing/EDLPass.js';
+            import { SceneRenderPass } from './jsm/postprocessing/SceneRenderPass.js';
+            import { DepthCompositeShader } from './jsm/postprocessing/DepthCompositeShader.js';
             import setupLoadingScreen from 'LoadingScreen';
 
             import {
@@ -165,30 +169,71 @@
                 await layer.whenReady;
                 zoomToLayer(view, layer);
 
-                // Setup EDL pass for better point cloud visualization
+                // Setup post-processing with EffectComposer
                 const gfxEngine = view.mainLoop.gfxEngine;
+                const renderer = gfxEngine.renderer;
                 const size = gfxEngine.getWindowSize();
-                const edlPass = new EDLPass(view.camera3D, size.x, size.y);
-                edlPass.renderToScreen = true;
 
+                // Create EffectComposer
+                const composer = new EffectComposer(renderer);
+                composer.setSize(size.x, size.y);
+
+                // Get objects for visibility toggling
+                const pointCloudRoot = layer.object3d;
+                const globeRoot = view.tileLayer.object3d;
+
+                // Pass 1: Render background (globe without points)
+                const backgroundPass = new SceneRenderPass(view.scene, view.camera3D, {
+                    exclude: [pointCloudRoot],
+                });
+                backgroundPass.setSize(size.x, size.y);
+                composer.addPass(backgroundPass);
+
+                // Pass 2: Render points only
+                const pointsPass = new SceneRenderPass(view.scene, view.camera3D, {
+                    include: [pointCloudRoot],
+                });
+                pointsPass.setSize(size.x, size.y);
+                composer.addPass(pointsPass);
+
+                // Pass 3: Apply EDL to points
+                const edlPass = new EDLPass(view.camera3D, size.x, size.y);
+                edlPass.inputColorTexture = pointsPass.colorTexture;
+                edlPass.inputDepthTexture = pointsPass.depthTexture;
+                composer.addPass(edlPass);
+
+                // Pass 4: Composite EDL points over background based on depth
+                const compositePass = new ShaderPass(DepthCompositeShader);
+                compositePass.renderToScreen = true;
+                composer.addPass(compositePass);
+
+                // Custom render function
                 view.render = function render() {
                     if (!edlPass.enabled) {
                         gfxEngine.renderView(view);
                         return;
                     }
 
-                    const renderer = gfxEngine.renderer;
-                    renderer.setRenderTarget(gfxEngine.fullSizeRenderTarget);
-                    renderer.clear();
-                    renderer.render(view.scene, view.camera3D);
+                    // Update EDL input textures (in case passes were resized)
+                    edlPass.inputColorTexture = pointsPass.colorTexture;
+                    edlPass.inputDepthTexture = pointsPass.depthTexture;
 
-                    edlPass.edlMaterial.uniforms.cameraNear.value = view.camera3D.near;
-                    edlPass.edlMaterial.uniforms.cameraFar.value = view.camera3D.far;
-                    edlPass.render(renderer, null, gfxEngine.fullSizeRenderTarget);
+                    // Update composite pass uniforms
+                    const uniforms = compositePass.uniforms;
+                    uniforms.tBackground.value = backgroundPass.colorTexture;
+                    uniforms.tBackgroundDepth.value = backgroundPass.depthTexture;
+                    uniforms.tForeground.value = edlPass.outputColorTexture;
+                    uniforms.tForegroundDepth.value = pointsPass.depthTexture;
+
+                    // Render the composer
+                    composer.render();
                 };
 
                 window.addEventListener('resize', () => {
                     const newSize = gfxEngine.getWindowSize();
+                    composer.setSize(newSize.x, newSize.y);
+                    backgroundPass.setSize(newSize.x, newSize.y);
+                    pointsPass.setSize(newSize.x, newSize.y);
                     edlPass.setSize(newSize.x, newSize.y);
                 });
 

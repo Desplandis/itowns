@@ -2,6 +2,9 @@ import {
     NoBlending,
     ShaderMaterial,
     UniformsUtils,
+    WebGLRenderTarget,
+    DepthTexture,
+    FloatType,
 } from 'three';
 // eslint-disable-next-line import/extensions
 import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
@@ -93,6 +96,24 @@ class EDLPass extends Pass {
         uniforms.cameraFar.value = this.camera.far;
 
         this._fsQuad = new FullScreenQuad();
+
+        /**
+         * Optional explicit input textures.
+         * When set, these override the readBuffer.
+         * @type {THREE.Texture|null}
+         */
+        this.inputColorTexture = null;
+
+        /**
+         * @type {THREE.DepthTexture|null}
+         */
+        this.inputDepthTexture = null;
+
+        /**
+         * Internal render target for output when used with explicit inputs.
+         * @type {THREE.WebGLRenderTarget|null}
+         */
+        this._outputTarget = null;
     }
 
     /**
@@ -104,6 +125,31 @@ class EDLPass extends Pass {
         this.height = height;
 
         this.edlMaterial.uniforms.resolution.value.set(width, height);
+
+        if (this._outputTarget) {
+            this._outputTarget.dispose();
+            this._outputTarget = new WebGLRenderTarget(width, height);
+            this._outputTarget.depthTexture = new DepthTexture(width, height, FloatType);
+        }
+    }
+
+    /**
+     * Get the output color texture (when using explicit inputs)
+     * @returns {THREE.Texture|null}
+     */
+    get outputColorTexture() {
+        return this._outputTarget?.texture ?? null;
+    }
+
+    /**
+     * Ensure output target exists
+     * @private
+     */
+    _ensureOutputTarget() {
+        if (!this._outputTarget) {
+            this._outputTarget = new WebGLRenderTarget(this.width, this.height);
+            this._outputTarget.depthTexture = new DepthTexture(this.width, this.height, FloatType);
+        }
     }
 
     /**
@@ -112,10 +158,24 @@ class EDLPass extends Pass {
      * @param {WebGLRenderTarget} readBuffer
      */
     render(renderer, writeBuffer, readBuffer) {
-        this.edlMaterial.uniforms.tDepth.value = readBuffer.depthTexture;
-        this.edlMaterial.uniforms.tDiffuse.value = readBuffer.texture;
+        // Update camera uniforms
+        this.edlMaterial.uniforms.cameraNear.value = this.camera.near;
+        this.edlMaterial.uniforms.cameraFar.value = this.camera.far;
 
-        renderer.setRenderTarget(this.renderToScreen ? null : writeBuffer);
+        // Use explicit inputs if provided, otherwise use readBuffer
+        if (this.inputColorTexture && this.inputDepthTexture) {
+            this.edlMaterial.uniforms.tDiffuse.value = this.inputColorTexture;
+            this.edlMaterial.uniforms.tDepth.value = this.inputDepthTexture;
+
+            // Render to internal output target
+            this._ensureOutputTarget();
+            renderer.setRenderTarget(this.renderToScreen ? null : this._outputTarget);
+        } else {
+            this.edlMaterial.uniforms.tDepth.value = readBuffer.depthTexture;
+            this.edlMaterial.uniforms.tDiffuse.value = readBuffer.texture;
+
+            renderer.setRenderTarget(this.renderToScreen ? null : writeBuffer);
+        }
 
         this._fsQuad.material = this.edlMaterial;
         this._fsQuad.render(renderer);
@@ -123,6 +183,9 @@ class EDLPass extends Pass {
 
     dispose() {
         this._fsQuad.dispose();
+        if (this._outputTarget) {
+            this._outputTarget.dispose();
+        }
     }
 }
 
