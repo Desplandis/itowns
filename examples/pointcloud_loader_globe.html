@@ -1,6 +1,6 @@
 <html>
     <head>
-        <title>Itowns - Point cloud loader</title>
+        <title>Itowns - Point cloud loader (Globe)</title>
 
         <script type="importmap">
         {
@@ -73,16 +73,22 @@
 
         <script type="module">
 
-            import { Box3, Vector3 } from 'three';
+            import { Vector3 } from 'three';
             import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
             import { EDLPass } from './jsm/postprocessing/EDLPass.js';
+            import setupLoadingScreen from 'LoadingScreen';
 
             import {
                 CopcSource, CopcLayer,
                 EntwinePointTileSource, EntwinePointTileLayer,
-                PlanarControls,
+                GlobeView,
+                Coordinates,
+                WMTSSource,
+                TMSSource,
+                ColorLayer,
+                ElevationLayer,
+                Fetcher,
                 View,
-                MAIN_LOOP_EVENTS,
             } from 'itowns';
             import * as debug from 'debug';
 
@@ -110,23 +116,16 @@
             }
 
             function zoomToLayer(view, layer) {
-                const camera = view.camera3D;
-                const obb = layer.root.voxelOBB;
+                const lookAt = layer.root.clampOBB.position;
+                const coordLookAt = new Coordinates(view.referenceCrs).setFromVector3(lookAt);
 
-                const center = obb.box3D.getCenter(new Vector3());
-                obb.localToWorld(center);
-                const length = obb.box3D.getSize(new Vector3()).length();
+                const size = new Vector3();
+                layer.root.voxelOBB.box3D.getSize(size);
 
-                const fov = camera.fov * (Math.PI / 180);
-                const radius = length / 2;
-                const distance = radius / Math.tan(fov / 2);
-
-                const up = new Vector3(0, 0, 1);
-                camera.position.copy(center).addScaledVector(up, distance);
-                camera.far = 2 * distance;
-                camera.lookAt(center);
-                camera.updateProjectionMatrix();
-                view.notifyChange(camera);
+                view.controls.lookAtCoordinate({
+                    coord: coordLookAt,
+                    range: 2 * size.length(),
+                }, false);
             }
 
             async function load(url, format = 'auto') {
@@ -135,19 +134,38 @@
                 const source = new Source({ url });
                 await source.whenReady;
 
-                const layer = new Layer('pointcloud', { source });
-                layer.crs = source.crs;
+                // Create GlobeView - near/far are calculated dynamically
+                const view = new GlobeView(viewerDiv);
+                setupLoadingScreen(viewerDiv, view);
+                view.controls.minDistance = 5;
 
-                const view = new View(layer.crs, viewerDiv);
-                view.renderer.setClearColor(0xdddddd);
-                view.addLayer(layer);
+                // Add OSM base imagery layer
+                Fetcher.json('./layers/JSONLayers/OPENSM.json').then(function(config) {
+                    config.source = new TMSSource(config.source);
+                    view.addLayer(new ColorLayer(config.id, config));
+                });
+
+                // Add worldwide elevation layer (IGN SRTM3 - float32 BIL format)
+                Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(function(config) {
+                    config.source = new WMTSSource(config.source);
+                    view.addLayer(new ElevationLayer(config.id, config));
+                });
+
+                // Create and add point cloud layer
+                const layer = new Layer('pointcloud', {
+                    source,
+                    crs: view.referenceCrs,
+                    sseThreshold: 2,
+                    pointBudget: 3000000,
+                });
+
+                // Use View.prototype.addLayer for point cloud on globe
+                View.prototype.addLayer.call(view, layer);
 
                 await layer.whenReady;
                 zoomToLayer(view, layer);
 
-                const controls = new PlanarControls(view);
-                controls.groundLevel = layer.minElevationRange;
-
+                // Setup EDL pass for better point cloud visualization
                 const gfxEngine = view.mainLoop.gfxEngine;
                 const size = gfxEngine.getWindowSize();
                 const edlPass = new EDLPass(view.camera3D, size.x, size.y);
@@ -174,92 +192,17 @@
                     edlPass.setSize(newSize.x, newSize.y);
                 });
 
-                const visibleBox = new Box3();
-                const nodeBox = new Box3();
-                let currentNear = view.camera3D.near;
-                let currentFar = view.camera3D.far;
-
-                view.addFrameRequester(MAIN_LOOP_EVENTS.AFTER_RENDER, () => {
-                    const root = layer.root;
-                    if (!root?.obj) {
-                        return;
-                    }
-
-                    // Compute bounding box of ALL visible nodes in world space
-                    visibleBox.makeEmpty();
-
-                    layer.root.traverse((node) => {
-                        const obj = node.obj;
-                        if (!obj?.visible || !obj.geometry) {
-                            return;
-                        }
-
-                        if (!obj.geometry.boundingBox) {
-                            obj.geometry.computeBoundingBox();
-                        }
-
-                        nodeBox.copy(obj.geometry.boundingBox);
-                        nodeBox.applyMatrix4(obj.matrixWorld);
-                        visibleBox.union(nodeBox);
-                    });
-
-                    if (visibleBox.isEmpty()) {
-                        return;
-                    }
-
-                    // Transform visible bounds to camera space (view space)
-                    // In camera space, -Z is the look direction
-                    const cameraBox = visibleBox.clone().applyMatrix4(view.camera3D.matrixWorldInverse);
-
-                    // near = distance to closest visible point (max.z is closest, negate for distance)
-                    // far = distance to farthest visible point (min.z is farthest, negate for distance)
-                    let targetNear = -cameraBox.max.z;
-                    let targetFar = -cameraBox.min.z;
-
-                    // Safety margins (5% closer/farther to avoid clipping)
-                    targetNear *= 0.95;
-                    targetFar *= 1.05;
-
-                    // Clamp near to avoid extreme values (too small = z-fighting, too large = clipping)
-                    const minNear = 0.1;
-                    const maxNear = targetFar * 0.5; // Near shouldn't exceed half the far distance
-                    targetNear = Math.max(minNear, Math.min(targetNear, maxNear));
-
-                    // Ensure far > near with minimum separation for depth precision
-                    const minSeparation = Math.max(targetNear * 0.1, 1);
-                    targetFar = Math.max(targetFar, targetNear + minSeparation);
-
-                    // Smooth transition to avoid jittery near/far changes
-                    // Use exponential smoothing with different rates for expanding vs contracting
-                    const expandRate = 0.3;   // Fast expansion to avoid clipping
-                    const contractRate = 0.05; // Slow contraction for stability
-
-                    const nearRate = targetNear < currentNear ? expandRate : contractRate;
-                    const farRate = targetFar > currentFar ? expandRate : contractRate;
-
-                    currentNear += (targetNear - currentNear) * nearRate;
-                    currentFar += (targetFar - currentFar) * farRate;
-
-                    // Only update if change is significant (avoids constant projection updates)
-                    const nearChanged = Math.abs(currentNear - view.camera3D.near) > view.camera3D.near * 0.01;
-                    const farChanged = Math.abs(currentFar - view.camera3D.far) > view.camera3D.far * 0.01;
-
-                    if (nearChanged || farChanged) {
-                        view.camera3D.near = currentNear;
-                        view.camera3D.far = currentFar;
-                        view.camera3D.updateProjectionMatrix();
-                    }
-                });
-
                 const gui = new GUI();
                 debug.PointCloudDebug.initTools(view, layer, gui);
 
                 // EDL controls
                 const edlGui = gui.addFolder('Eye Dome Lighting');
                 edlGui.add(edlPass, 'enabled').name('Enabled').onChange(() => view.notifyChange());
-                // edlGui.add(edlPass, 'strength', 0.1, 5.0, 0.1).name('Strength');
-                // edlGui.add(edlPass, 'radius', 0.5, 4.0, 0.1).name('Radius (px)');
                 edlGui.open();
+
+                // Export to window for debugging
+                window.view = view;
+                window.layer = layer;
             }
 
             const params = new URLSearchParams(window.location.search);
