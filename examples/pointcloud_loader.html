@@ -1,0 +1,170 @@
+<html>
+    <head>
+        <title>Itowns - Point cloud loader</title>
+
+        <script type="importmap">
+        {
+            "imports": {
+                "itowns": "../dist/itowns.js",
+                "debug": "../dist/debug.js",
+                "LoadingScreen": "./jsm/GUI/LoadingScreen.js",
+                "itowns_widgets": "../dist/itowns_widgets.js",
+                "three": "https://unpkg.com/three@0.182.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.182.0/examples/jsm/"
+            }
+        }
+        </script>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" type="text/css" href="css/example.css">
+        <link rel="stylesheet" type="text/css" href="css/LoadingScreen.css">
+
+        <style type="text/css">
+            #description {
+                z-index: 2;
+                left: 10px;
+            }
+
+            #viewerDiv {
+                position: absolute;
+                inset: 0;
+            }
+
+            #description.error {
+                border: 1px solid #cc3311;
+            }
+
+            #description .error-message {
+                display: none;
+                margin-top: 8px;
+                color: #cc3311;
+                font-size: 12px;
+            }
+
+            #description.error .error-message {
+                display: block;
+            }
+        </style>
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <form id="description" method="GET">
+            <label for="url">
+                Specify the URL of a point cloud to load:
+            </label>
+
+            <input type="text" id="url" name="url" required placeholder="Point cloud URL" />
+
+            <select id="format" name="format">
+                <option value="auto" selected>Auto-detect</option>
+                <option value="ept">Entwine (EPT)</option>
+                <option value="copc">COPC (.copc.laz)</option>
+                <option value="vpc">VPC (.vpc)</option>
+                <option value="potree">Potree 1.x</option>
+                <option value="potree2">Potree 2.x</option>
+            </select>
+
+            <button type="submit">Load</button>
+
+            <div class="error-message" id="errorMessage" role="alert"></div>
+        </form>
+
+        <div id="viewerDiv"></div>
+
+        <script type="module">
+
+            import { Vector3 } from 'three';
+			import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
+            import {
+                CopcSource, CopcLayer,
+                EntwinePointTileSource, EntwinePointTileLayer,
+                PlanarControls,
+                View,
+            } from 'itowns';
+            import * as debug from 'debug';
+
+            const viewerDiv = document.getElementById('viewerDiv');
+            const form = document.getElementById('description');
+            const urlInput = document.getElementById('url');
+            const formatSelect = document.getElementById('format');
+            const errorMessage = document.getElementById('errorMessage');
+
+            function getFormat(url, format) {
+                if (url.includes('.copc.laz')) { return 'copc'; }
+                if (url.includes('ept.json')) { return 'ept'; }
+                return format;
+            }
+
+            function getPointCloudClass(url, format) {
+                if (format === 'copc') {
+                    return { Source: CopcSource, Layer: CopcLayer };
+                }
+                if (format === 'ept') {
+                    return { Source: EntwinePointTileSource, Layer: EntwinePointTileLayer };
+                }
+
+                throw new Error(`Cannot infer format from URL ${url} and format ${format}`);
+            }
+
+            function zoomToLayer(view, layer) {
+                const camera = view.camera3D;
+                const obb = layer.root.voxelOBB;
+
+                const center = obb.box3D.getCenter(new Vector3());
+                obb.localToWorld(center);
+                const length = obb.box3D.getSize(new Vector3()).length();
+
+                const fov = camera.fov * (Math.PI / 180);
+                const radius = length / 2;
+                const distance = radius / Math.tan(fov / 2);
+
+                const up = new Vector3(0, 0, 1);
+                camera.position.copy(center).addScaledVector(up, distance);
+                camera.far = 2 * distance;
+                camera.lookAt(center);
+                camera.updateProjectionMatrix();
+                view.notifyChange(camera);
+            }
+
+            async function load(url, format = 'auto') {
+                const { Source, Layer } = getPointCloudClass(url, format);
+
+                const source = new Source({ url });
+                await source.whenReady;
+
+                const layer = new Layer('pointcloud', { source });
+                layer.crs = source.crs;
+
+                const view = new View(layer.crs, viewerDiv);
+                view.renderer.setClearColor(0xdddddd);
+                view.addLayer(layer);
+
+                await layer.whenReady;
+                zoomToLayer(view, layer);
+
+                const controls = new PlanarControls(view);
+                controls.groundLevel = layer.minElevationRange;
+
+                const gui = new GUI();
+                debug.PointCloudDebug.initTools(view, layer, gui);
+            }
+
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('url')) {
+                const url = params.get('url');
+                const format = getFormat(url, params.get('format'));
+                urlInput.value = url;
+                formatSelect.value = format;
+                try {
+                    await load(url, format);
+                } catch (error) {
+                    console.error(error);
+                    const message = error?.message ?? 'Failed to load the point cloud.';
+                    form.classList.toggle('error', true);
+                    errorMessage.textContent = message;
+                }
+            }
+        </script>
+    </body>
+</html>
