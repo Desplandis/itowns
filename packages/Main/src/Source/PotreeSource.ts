@@ -1,7 +1,6 @@
 import Source from 'Source/Source';
 import Fetcher from 'Provider/Fetcher';
 import PotreeBinParser from 'Parser/PotreeBinParser';
-import PotreeCinParser from 'Parser/PotreeCinParser';
 
 type PotreeBBox = {
     lx: number; ly: number; lz: number;
@@ -42,7 +41,6 @@ class PotreeSource extends Source {
     boundsConforming!: [number, number, number, number, number, number];
     pointAttributes!: string[];
     baseurl!: string;
-    extension!: 'cin' | 'bin';
     scale!: number;
     zmin!: number;
     zmax!: number;
@@ -133,10 +131,7 @@ class PotreeSource extends Source {
                 ];
                 this.pointAttributes = cloud.pointAttributes;
                 this.baseurl = `${this.url}/${cloud.octreeDir}/r`;
-                // @ts-expect-error non-standard CIN extension, shall be removed
-                this.extension = cloud.pointAttributes === 'CIN' ? 'cin' : 'bin';
-                this.parser = this.extension === 'cin' ?
-                    PotreeCinParser.parse : PotreeBinParser.parse;
+                this.parser = PotreeBinParser.parse;
                 this.scale = cloud.scale;
 
                 this.zmin = cloud.tightBoundingBox.lz;
