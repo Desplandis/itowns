@@ -40,6 +40,8 @@ attribute float returnNumber;
 attribute float numberOfReturns;
 attribute float scanAngle;
 
+uniform float depth;
+
 void main() {
     vec2 uv = vec2(classification/255., 0.5);
 
@@ -100,6 +102,10 @@ void main() {
         } else if (mode == PNTS_MODE_ELEVATION) {
             float z = vec4(position, 1.0).z;
             float i = (z - elevationRange.x) / (elevationRange.y - elevationRange.x);
+            vec2 uv = vec2(i, (1. - i));
+            vColor = texture2D(gradientTexture, uv);
+        } else if (mode == PNTS_MODE_DEPTH) {
+            float i = (depth) / 12.0;
             vec2 uv = vec2(i, (1. - i));
             vColor = texture2D(gradientTexture, uv);
         }

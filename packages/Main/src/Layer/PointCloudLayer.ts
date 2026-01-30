@@ -390,6 +390,11 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
                     earlyDropFunction: cmd => !cmd.requester.visible || !this.visible,
                 }).then((pts: THREE.Points) => {
                     elt.obj = pts;
+                    pts.onBeforeRender = (renderer, scene, camera, geometry, material, group) => {
+                        // @ts-expect-error PointsMaterial is not typed yet
+                        material.uniforms.depth.value = elt.depth;
+                        (material as THREE.PointsMaterial).uniformsNeedUpdate = true;
+                    };
                     elt.obj.visible = false;
                     // make sure to add it here, otherwise it might never
                     // be added nor cleaned
@@ -445,16 +450,9 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
             return [];
         }
 
-        // get object on which to measure distance
-        let bbox;
-        let object3d;
-        if (elt.obj) {
-            object3d = elt.obj;
-            bbox = object3d.geometry.boundingBox as THREE.Box3;
-        } else {
-            object3d = elt.clampOBB;
-            bbox = object3d.box3D;
-        }
+        const object3d = elt.voxelOBB;
+        const bbox = object3d.box3D;
+        object3d.updateMatrixWorld();
 
         elt.visible = context.camera.isBox3Visible(bbox, object3d.matrixWorld);
 
@@ -479,6 +477,8 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
                 const count = pts.geometry.attributes.position.count;
                 pts.geometry.setDrawRange(0, count);
                 this.displayedCount += count;
+            } else {
+                pts.visible = false;
             }
         }
 
@@ -516,6 +516,7 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
                         limitHit = true;
                     } else {
                         this.displayedCount += count;
+                        this.setNodeVisible(pts.userData.node, pts.visible);
                     }
                 }
             }
@@ -534,6 +535,22 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
                 obj.userData.node.obj = null;
                 this.dispatchEvent({ type: 'dispose-model', scene: obj, tile: obj.userData.node });
             }
+        }
+
+        for (const pts of this.group.children as THREE.Points[]) {
+            this.setNodeVisible(pts.userData.node, pts.visible);
+        }
+    }
+
+    setNodeVisible(node: PointCloudNode, visible: boolean) {
+        node.visible = visible;
+        if (visible !== node._wasVisible) {
+            this.dispatchEvent({
+                type: 'tile-visibility-change',
+                tile: node,
+                visible,
+            });
+            node._wasVisible = visible;
         }
     }
 

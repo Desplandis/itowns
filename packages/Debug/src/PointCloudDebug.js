@@ -4,6 +4,71 @@ import OBBHelper from './OBBHelper';
 
 const folderName = 'Styling';
 
+const LOAD_TIME_SYMBOL = Symbol('loadTime');
+
+class DebugPointCloudPlugin {
+    constructor(layer) {
+        this.displayBoxBounds = false;
+        this.displaySphereBounds = false;
+        this.displayRegionBounds = false;
+
+        // init the plugin
+        this.layer = layer;
+        this.obbGroup = new THREE.Group();
+        this.obbGroup.name = 'DebugTilesRenderer.obbGroup';
+        // TODO: add to the view?
+        this.obbGroup.updateMatrixWorld();
+
+        // register events
+        // TODO: register 'load-tileset' => get max depth and max error
+        layer.addEventListener('load-model', this._onLoadModel);
+        layer.addEventListener('dispose-model', this._onDisposeModel);
+        layer.addEventListener('update-after', this.update);
+        layer.addEventListener('tile-visibility-change', this._onTileVisibilityChange);
+    }
+
+    init(layer) {
+        this.layer = layer;
+
+        if (!this.enabled) {
+            return;
+        }
+
+        // Initialize groups
+
+
+        // Initialize events (see above)
+
+        // Traverse already loaded tiles
+        // Traverse visible tiles
+
+        return 10;
+    }
+
+    _onLoadModel({ scene, tile }) {
+        tile[LOAD_TIME_SYMBOL] = performance.now();
+
+        // cache material & update materials?
+        // console.log('on load model', tile);
+    }
+
+    _onDisposeModel({ scene, tile }) {
+        // console.log('on dispose model', tile);
+        // TODO: delete the obb helper
+    }
+
+    _onTileVisibilityChange({ tile, visible }) {
+        console.log('on tile visibility change', tile.id, visible);
+    }
+
+    update() {
+        // console.log('update');
+    }
+
+    dispose() {
+    }
+}
+
 function getController(gui, name) {
     const controllers = gui.folders.filter(f => f._title === folderName)[0].controllers;
     const controller = controllers.filter(c => (c.property === name || c.name === name))[0];
@@ -49,47 +114,8 @@ function setupControllerVisibily(gui, displayMode, sizeMode) {
     }
 }
 
-/**
- * Generate the position array of the bbox corner form the bbox
- * Adapted from THREE.BoxHelper.js
- * https://github.com/mrdoob/three.js/blob/master/src/helpers/BoxHelper.js
- *
- * @param {THREE.box3} bbox - Box3 of the node
- * @returns {array}
- */
-function getCornerPosition(bbox) {
-    const array =  new Float32Array(8 * 3);
-
-    const min = bbox.min;
-    const max = bbox.max;
-
-    /*
-      5____4
-    1/___0/|
-    | 6__|_7
-    2/___3/
-
-    0: max.x, max.y, max.z
-    1: min.x, max.y, max.z
-    2: min.x, min.y, max.z
-    3: max.x, min.y, max.z
-    4: max.x, max.y, min.z
-    5: min.x, max.y, min.z
-    6: min.x, min.y, min.z
-    7: max.x, min.y, min.z
-    */
-    array[0] = max.x; array[1] = max.y; array[2] = max.z;
-    array[3] = min.x; array[4] = max.y; array[5] = max.z;
-    array[6] = min.x; array[7] = min.y; array[8] = max.z;
-    array[9] = max.x; array[10] = min.y; array[11] = max.z;
-    array[12] = max.x; array[13] = max.y; array[14] = min.z;
-    array[15] = min.x; array[16] = max.y; array[17] = min.z;
-    array[18] = min.x; array[19] = min.y; array[20] = min.z;
-    array[21] = max.x; array[22] = min.y; array[23] = min.z;
-    return array;
-}
-
 const red =  new THREE.Color(0xff0000);
+const blue = new THREE.Color(0x0000ff);
 function debugIdUpdate(context, layer, node) {
     // filtering helper attached to node with the current debug layer
     if (!node.link) {
@@ -100,31 +126,11 @@ function debugIdUpdate(context, layer, node) {
         if (!helper) {
             helper = new THREE.Group();
 
+            const color = (node.children && node.children.length) ? red : blue;
             // node obbes
-            const obbHelper = new OBBHelper(node.clampOBB, node.voxelKey, red);
+            const obbHelper = new OBBHelper(node.voxelOBB, node.voxelKey, color);
             obbHelper.layer = layer;
             helper.add(obbHelper);
-
-            // point data boxes (in local ref)
-            const tightboxHelper = new THREE.BoxHelper(undefined, 0x0000ff);
-            if (node.obj) {
-                tightboxHelper.geometry.attributes.position.array = getCornerPosition(node.obj.geometry.boundingBox);
-                tightboxHelper.applyMatrix4(node.obj.matrixWorld);
-                node.obj.tightboxHelper = tightboxHelper;
-                helper.add(tightboxHelper);
-                tightboxHelper.updateMatrixWorld(true);
-            } else if (node.promise) {
-                // TODO rethink architecture of node.obj/node.promise ?
-                node.promise.then(() => {
-                    if (node.obj) {
-                        tightboxHelper.geometry.attributes.position.array = getCornerPosition(node.obj.geometry.boundingBox);
-                        tightboxHelper.applyMatrix4(node.obj.matrixWorld);
-                        node.obj.tightboxHelper = tightboxHelper;
-                        helper.add(tightboxHelper);
-                        tightboxHelper.updateMatrixWorld(true);
-                    }
-                });
-            }
 
             node.link[layer.id] = helper;
         } else {
@@ -132,18 +138,6 @@ function debugIdUpdate(context, layer, node) {
         }
 
         layer.object3d.add(helper);
-
-        if (node.children && node.children.length) {
-            if (node.sse >= 1) {
-                return node.children;
-            } else {
-                for (const child of node.children) {
-                    if (child.link?.[layer.id]) {
-                        child.link[layer.id].visible = false;
-                    }
-                }
-            }
-        }
     } else if (helper) {
         layer.object3d.remove(helper);
     }
@@ -152,16 +146,14 @@ function debugIdUpdate(context, layer, node) {
 class DebugLayer extends GeometryLayer {
     constructor(id, options = {}) {
         super(id, options.object3d || new THREE.Group(), options);
-        this.update = debugIdUpdate;
+        this.update = () => {};
         this.isDebugLayer = true;
         this.layer = options.layer;
+        this.layer.addEventListener('tile-visibility-change', this._onTileVisibilityChange);
     }
 
-    preUpdate(context, sources) {
-        if (sources.has(this.parent)) {
-            this.object3d.clear();
-        }
-        return this.layer.preUpdate(context, sources);
+    _onTileVisibilityChange({ tile }) {
+        debugIdUpdate(this.layer, this, tile);
     }
 }
 
@@ -170,12 +162,15 @@ export default {
         datUi.title('Layer Controls');
         layer.debugUI = datUi.addFolder(`${layer.id}`);
 
+        // const debugTilesPlugin = new DebugTilesPlugin(layer);
+
         const update = () => {
             setupControllerVisibily(layer.debugUI, layer.material.mode, layer.material.sizeMode);
             view.notifyChange(layer, true);
         };
 
         layer.debugUI.add(layer, 'visible').name('Visible').onChange(update);
+        layer.debugUI.add(layer, 'frozen').name('Frozen').onChange(update);
         layer.debugUI.add(layer, 'sseThreshold').name('SSE threshold').onChange(update);
         layer.debugUI.add(layer, 'octreeDepthLimit', -1, 20).name('Depth limit').onChange(update);
         layer.debugUI.add(layer, 'pointBudget', 1, 15000000).name('Max point count').onChange(update);

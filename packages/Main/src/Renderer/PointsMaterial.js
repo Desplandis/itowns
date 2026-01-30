@@ -15,6 +15,7 @@ export const PNTS_MODE = {
     POINT_SOURCE_ID: 7,
     SCAN_ANGLE: 8,
     NORMAL: 9,
+    DEPTH: 10,
 };
 
 export const PNTS_SHAPE = {
@@ -219,6 +220,7 @@ class PointsMaterial extends THREE.ShaderMaterial {
             // THREE.PointsMaterial uniforms
             THREE.UniformsLib.points,
             THREE.UniformsLib.fog,
+            { depth: { value: 0 } },
         ]);
         this.vertexShader = PointsVS;
         this.fragmentShader = PointsFS;
