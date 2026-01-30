@@ -13,8 +13,6 @@ export interface PointCloudSource {
     networkOptions: RequestInit;
 }
 
-type ExtentedOBB = OBB & { matrixWorldInverse: THREE.Matrix4 };
-
 abstract class PointCloudNode extends THREE.EventDispatcher {
     /** The crs of the node. */
     abstract crs: string;
@@ -30,9 +28,9 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
     parent: this | undefined;
 
     /** The node cubique obb. */
-    voxelOBB: ExtentedOBB;
+    voxelOBB: OBB;
     /** The cubique obb clamped to zmin and zmax. */
-    clampOBB: ExtentedOBB;
+    clampOBB: OBB;
 
     // Properties used internally by PointCloud layer
     visible: boolean;
@@ -56,8 +54,8 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
         this.children = [];
         this.parent = undefined;
 
-        this.voxelOBB = new OBB() as ExtentedOBB;
-        this.clampOBB = new OBB() as ExtentedOBB;
+        this.voxelOBB = new OBB();
+        this.clampOBB = new OBB();
         this.sse = -1;
 
         this.visible = false;
@@ -181,8 +179,15 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
         root.voxelOBB.quaternion.copy(rotation).invert();
 
         root.voxelOBB.updateMatrix();
+        // Update matrixWorld since OBB is not part of scene hierarchy
+        root.voxelOBB.updateMatrixWorld(true);
+        // Compute matrixWorldInverse for distance calculations
+        root.voxelOBB.matrixWorldInverse.copy(root.voxelOBB.matrixWorld).invert();
 
         root.clampOBB.copy(root.voxelOBB);
+        // Also update clampOBB matrixWorld
+        root.clampOBB.updateMatrixWorld(true);
+        root.clampOBB.matrixWorldInverse.copy(root.clampOBB.matrixWorld).invert();
 
         const clampBBox = root.clampOBB.box3D;
         if (clampBBox.min.z < zmax) {
@@ -211,6 +216,11 @@ abstract class PointCloudNode extends THREE.EventDispatcher {
         } else {
             return this.findCommonAncestor(node.parent as this);
         }
+    }
+
+    traverse(callback: (node: this) => void): void {
+        callback(this);
+        this.children.forEach(child => child.traverse(callback));
     }
 }
 

@@ -107,6 +107,8 @@ abstract class LasNodeBase extends PointCloudNode {
         }
 
         (this.clampOBB.parent as Group).add(childNode.clampOBB);
+
+        childNode.voxelOBB.updateMatrixWorld(true);
         childNode.clampOBB.updateMatrixWorld(true);
     }
 }

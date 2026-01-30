@@ -34,6 +34,8 @@ const exclude = [
     path.resolve(__dirname, 'node_modules'),
 ];
 
+const watchIgnored = /^(?!.*(packages[\\/][^\\/]+[\\/]src|examples|test)).*/;
+
 module.exports = () => {
     const babelLoaderOptions = [];
     if (!noInline) {
@@ -47,6 +49,9 @@ module.exports = () => {
     const sharedConfig = {
         mode,
         context: path.resolve(__dirname),
+        watchOptions: {
+            ignored: watchIgnored,
+        },
         resolve: {
             extensions: ['.ts', '.js'],
             extensionAlias: {
@@ -167,8 +172,15 @@ module.exports = () => {
             static: {
                 directory: path.resolve(__dirname, './'),
                 watch: {
-                    ignored: exclude,
+                    ignored: watchIgnored,
                 },
+            },
+            watchFiles: {
+                paths: [
+                    path.resolve(__dirname, 'packages', '**', 'src', '**', '*'),
+                    path.resolve(__dirname, 'examples', '**', '*'),
+                    path.resolve(__dirname, 'test', '**', '*'),
+                ],
             },
             client: {
                 overlay: {

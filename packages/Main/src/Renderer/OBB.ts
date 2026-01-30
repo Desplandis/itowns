@@ -21,6 +21,7 @@ class OBB extends THREE.Object3D {
     box3D: THREE.Box3;
     natBox: THREE.Box3;
     z: { min: number, max: number, scale: number, delta: number };
+    matrixWorldInverse: THREE.Matrix4;
 
     /**
      * @param min - (optional) A {@link THREE.Vector3} representing the lower
@@ -38,6 +39,13 @@ class OBB extends THREE.Object3D {
         this.box3D = new THREE.Box3(min.clone(), max.clone());
         this.natBox = this.box3D.clone();
         this.z = { min: 0, max: 0, scale: 1.0, delta: 0 };
+        this.matrixWorldInverse = new THREE.Matrix4();
+    }
+
+    updateMatrixWorld(force?: boolean): this {
+        super.updateMatrixWorld(force);
+        this.matrixWorldInverse.copy(this.matrixWorld).invert();
+        return this;
     }
 
     /**
@@ -75,6 +83,79 @@ class OBB extends THREE.Object3D {
 
         this.box3D.min.z = this.natBox.min.z + this.z.min * this.z.scale + geoidHeight;
         this.box3D.max.z = this.natBox.max.z + this.z.max * this.z.scale + geoidHeight;
+    }
+
+    intersectsFrustum(frustum: THREE.Frustum): boolean {
+        this.updateMatrixWorld(true);
+
+        const invMatrix = this.matrixWorldInverse;
+
+        const min = this.box3D.min;
+        const max = this.box3D.max;
+
+        const center = new THREE.Vector3()
+            .addVectors(min, max)
+            .multiplyScalar(0.5);
+
+        const extents = new THREE.Vector3()
+            .subVectors(max, min)
+            .multiplyScalar(0.5);
+
+        const localPlane = new THREE.Plane();
+        const localNormal = new THREE.Vector3();
+
+        for (let i = 0; i < 6; i++) {
+            localPlane.copy(frustum.planes[i]).applyMatrix4(invMatrix);
+
+            localNormal.copy(localPlane.normal);
+            localNormal.set(
+                Math.abs(localNormal.x),
+                Math.abs(localNormal.y),
+                Math.abs(localNormal.z),
+            );
+
+            const r =
+                extents.x * localNormal.x +
+                extents.y * localNormal.y +
+                extents.z * localNormal.z;
+
+            const d = localPlane.distanceToPoint(center);
+
+            if (d + r < 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    getBoundingSphere(sphere: THREE.Sphere = new THREE.Sphere()): THREE.Sphere {
+        const min = this.box3D.min;
+        const max = this.box3D.max;
+
+        // 8 corners of the box in local space
+        const points = [
+            new THREE.Vector3(min.x, min.y, min.z),
+            new THREE.Vector3(min.x, min.y, max.z),
+            new THREE.Vector3(min.x, max.y, min.z),
+            new THREE.Vector3(min.x, max.y, max.z),
+            new THREE.Vector3(max.x, min.y, min.z),
+            new THREE.Vector3(max.x, min.y, max.z),
+            new THREE.Vector3(max.x, max.y, min.z),
+            new THREE.Vector3(max.x, max.y, max.z),
+        ];
+
+        // Temporary world-space AABB
+        const worldBox = new THREE.Box3();
+        worldBox.makeEmpty();
+
+        for (const p of points) {
+            p.applyMatrix4(this.matrixWorld);
+            worldBox.expandByPoint(p);
+        }
+
+        worldBox.getBoundingSphere(sphere);
+        return sphere;
     }
 
     /**
