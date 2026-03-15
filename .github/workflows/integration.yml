@@ -153,6 +153,13 @@ jobs:
         with:
           name: dist-itowns
 
+      # Disable AppArmor restrictions for unprivileged users to allow
+      # Chromium/puppeteer to sandbox.
+      # see https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md
+      - name: Setup Chrome SUID sandbox
+        if: runner.os == 'Linux'
+        run: echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
+
       - name: Run functional tests
         run: npm run test-functional
 
