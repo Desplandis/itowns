@@ -49,77 +49,48 @@ function setupControllerVisibily(gui, displayMode, sizeMode) {
     }
 }
 
-/**
- * Generate the position array of the bbox corner form the bbox
- * Adapted from THREE.BoxHelper.js
- * https://github.com/mrdoob/three.js/blob/master/src/helpers/BoxHelper.js
- *
- * @param {THREE.box3} bbox - Box3 of the node
- * @returns {array}
- */
-function getCornerPosition(bbox) {
-    const array =  new Float32Array(8 * 3);
-
-    const min = bbox.min;
-    const max = bbox.max;
-
-    /*
-      5____4
-    1/___0/|
-    | 6__|_7
-    2/___3/
-
-    0: max.x, max.y, max.z
-    1: min.x, max.y, max.z
-    2: min.x, min.y, max.z
-    3: max.x, min.y, max.z
-    4: max.x, max.y, min.z
-    5: min.x, max.y, min.z
-    6: min.x, min.y, min.z
-    7: max.x, min.y, min.z
-    */
-    array[0] = max.x; array[1] = max.y; array[2] = max.z;
-    array[3] = min.x; array[4] = max.y; array[5] = max.z;
-    array[6] = min.x; array[7] = min.y; array[8] = max.z;
-    array[9] = max.x; array[10] = min.y; array[11] = max.z;
-    array[12] = max.x; array[13] = max.y; array[14] = min.z;
-    array[15] = min.x; array[16] = max.y; array[17] = min.z;
-    array[18] = min.x; array[19] = min.y; array[20] = min.z;
-    array[21] = max.x; array[22] = min.y; array[23] = min.z;
-    return array;
-}
-
-function createOBBHelper(node) {
-    return new OBBHelper(node.voxelOBB, new THREE.Color(THREE.Color.NAMES.darkred));
+function createVoxelOBBHelper(node) {
+    const helper = new OBBHelper(node.voxelOBB, new THREE.Color(THREE.Color.NAMES.darkred));
+    helper.name = node.id;
+    return helper;
 }
 
 function createClampOBBHelper(node) {
-    return new OBBHelper(node.clampOBB, new THREE.Color(THREE.Color.NAMES.red));
+    const helper = new OBBHelper(node.clampOBB, new THREE.Color(THREE.Color.NAMES.red));
+    helper.name = node.id;
+    return helper;
 }
 
-function createBoxHelper(node) {
-    const bboxHelper = new THREE.BoxHelper(undefined, new THREE.Color(THREE.Color.NAMES.blue));
+function createPointsOBBHelper(node) {
+    let helper;
     if (node.obj) {
-        bboxHelper.geometry.attributes.position.array = getCornerPosition(node.obj.geometry.boundingBox);
-        bboxHelper.applyMatrix4(node.obj.matrixWorld);
+        const pointsOBB = {
+            position: node.obj.position.clone(),
+            quaternion: node.obj.quaternion.clone(),
+            box3D: node.obj.geometry.boundingBox.clone(),
+        };
+        helper = new OBBHelper(pointsOBB, new THREE.Color(THREE.Color.NAMES.yellow));
     } else if (node.promise) {
         // TODO rethink architecture of node.obj/node.promise ?
         node.promise.then(() => {
-            if (node.obj) {
-                bboxHelper.geometry.attributes.position.array = getCornerPosition(node.obj.geometry.boundingBox);
-                bboxHelper.applyMatrix4(node.obj.matrixWorld);
-            }
+            const pointsOBB = {
+                position: node.obj.position.clone(),
+                quaternion: node.obj.quaternion.clone(),
+                box3D: node.obj.geometry.boundingBox.clone(),
+            };
+            helper = new OBBHelper(pointsOBB, new THREE.Color(THREE.Color.NAMES.yellow));
         });
     }
-    return bboxHelper;
+    helper.name = node.id;
+    return helper;
 }
 
 const NODE_BOXES_SYMBOL = Symbol('PointCloudNode.boxes');
 
 class PointCloudDebug {
     constructor() {
-        this.displayBoxBounds = false;
-        this.displayOBBBounds = false;
+        this.displayPointsBounds = false;
+        this.displayVoxelBounds = false;
         this.displayClampBounds = false;
 
         this.layer = null;
@@ -129,20 +100,20 @@ class PointCloudDebug {
 
         this.group = new THREE.Group();
 
-        this.obbGroup = new THREE.Group();
-        this.obbGroup.name = 'PointCloudDebug.obbGroup';
-        this.group.add(this.obbGroup);
-        this.obbGroup.updateMatrixWorld();
+        this.voxelOBBGroup = new THREE.Group();
+        this.voxelOBBGroup.name = 'PointCloudDebug.voxelOBBGroup';
+        this.group.add(this.voxelOBBGroup);
+        this.voxelOBBGroup.updateMatrixWorld();
 
         this.clampOBBGroup = new THREE.Group();
         this.clampOBBGroup.name = 'PointCloudDebug.clampOBBGroup';
         this.group.add(this.clampOBBGroup);
         this.clampOBBGroup.updateMatrixWorld();
 
-        this.boxGroup = new THREE.Group();
-        this.boxGroup.name = 'PointCloudDebug.boxGroup';
-        this.group.add(this.boxGroup);
-        this.boxGroup.updateMatrixWorld();
+        this.pointsOBBGroup = new THREE.Group();
+        this.pointsOBBGroup.name = 'PointCloudDebug.pointsOBBGroup';
+        this.group.add(this.pointsOBBGroup);
+        this.pointsOBBGroup.updateMatrixWorld();
     }
 
     init(layer) {
@@ -160,9 +131,9 @@ class PointCloudDebug {
     onDisposeModel({ tile }) {
         const helpers = tile[NODE_BOXES_SYMBOL]; // Group of OBB helpers?
         if (helpers) {
-            helpers.obb.dispose();
+            helpers.voxelOBB.dispose();
             helpers.clampOBB.dispose();
-            helpers.bbox.dispose();
+            helpers.pointsOBB.dispose();
             delete tile[NODE_BOXES_SYMBOL];
         }
     }
@@ -171,43 +142,43 @@ class PointCloudDebug {
         let helpers = tile[NODE_BOXES_SYMBOL];
         if (visible && !helpers) {
             helpers = {
-                obb: createOBBHelper(tile),
+                voxelOBB: createVoxelOBBHelper(tile),
                 clampOBB: createClampOBBHelper(tile),
-                bbox: createBoxHelper(tile),
+                pointsOBB: createPointsOBBHelper(tile),
             };
             tile[NODE_BOXES_SYMBOL] = helpers;
         }
 
         if (helpers) {
             if (!visible) {
-                this.obbGroup.remove(helpers.obb);
+                this.voxelOBBGroup.remove(helpers.voxelOBB);
                 this.clampOBBGroup.remove(helpers.clampOBB);
-                this.boxGroup.remove(helpers.bbox);
+                this.pointsOBBGroup.remove(helpers.pointsOBB);
             } else {
-                this.obbGroup.add(helpers.obb);
-                helpers.obb.updateMatrixWorld(true);
+                this.voxelOBBGroup.add(helpers.voxelOBB);
+                helpers.voxelOBB.updateMatrixWorld(true);
                 this.clampOBBGroup.add(helpers.clampOBB);
                 helpers.clampOBB.updateMatrixWorld(true);
-                this.boxGroup.add(helpers.bbox);
-                helpers.bbox.updateMatrixWorld(true);
+                this.pointsOBBGroup.add(helpers.pointsOBB);
+                helpers.pointsOBB.updateMatrixWorld(true);
             }
         }
     }
 
     update() {
-        this.obbGroup.visible = this.displayOBBBounds;
+        this.voxelOBBGroup.visible = this.displayVoxelBounds;
         this.clampOBBGroup.visible = this.displayClampBounds;
-        this.boxGroup.visible = this.displayBoxBounds;
+        this.pointsOBBGroup.visible = this.displayPointsBounds;
     }
 
     dispose() {
-        const { layer, obbGroup } = this;
+        const { layer, voxelOBBGroup } = this;
 
         layer?.removeEventListener('dispose-model', this._onDisposeModel);
         layer?.removeEventListener('update-after', this._update);
         layer?.removeEventListener('node-visibility-change', this._onTileVisibilityChange);
 
-        obbGroup?.removeFromParent();
+        voxelOBBGroup?.removeFromParent();
     }
 }
 
@@ -353,13 +324,13 @@ export default {
         debugBoxes.init(layer);
         view.scene.add(debugBoxes.group);
 
-        debugUI.add(debugBoxes, 'displayOBBBounds').name('Node OBB').onChange(() => {
+        debugUI.add(debugBoxes, 'displayVoxelBounds').name('Node OBB (voxel)').onChange(() => {
             view.notifyChange(layer, true);
         });
         debugUI.add(debugBoxes, 'displayClampBounds').name('Node OBB (clamp)').onChange(() => {
             view.notifyChange(layer, true);
         });
-        debugUI.add(debugBoxes, 'displayBoxBounds').name('Geometry Box').onChange(() => {
+        debugUI.add(debugBoxes, 'displayPointsBounds').name('Points OBB').onChange(() => {
             view.notifyChange(layer, true);
         });
 
