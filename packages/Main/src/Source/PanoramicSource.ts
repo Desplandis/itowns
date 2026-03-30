@@ -1,5 +1,7 @@
 import Fetcher from 'Provider/Fetcher';
-import type { PanoramaxItem, StacAssetRole } from 'Stac/StacTypes';
+import type {
+    PanoramaxItem, StacAssetRole, TileMatrixSet,
+} from 'Stac/StacTypes';
 
 export interface PanoramicSourceOptions {
     item?: PanoramaxItem;
@@ -61,6 +63,30 @@ class PanoramicSource {
         }
 
         throw new Error(`No image asset found in STAC item ${item.id}`);
+    }
+
+    /**
+     * Returns the first `TileMatrixSet` declared in the item's
+     * `tiles:tile_matrix_sets` property, or `null` when the item has no
+     * tiled assets.
+     */
+    getTileMatrixSet(item: PanoramaxItem): TileMatrixSet | null {
+        const sets = item.properties['tiles:tile_matrix_sets'];
+        if (!sets) { return null; }
+        const first = Object.values(sets)[0];
+        return first ?? null;
+    }
+
+    /**
+     * Resolves the tile asset template URL for a given column and row.
+     * Returns `null` when the item has no `asset_templates.tiles` entry.
+     */
+    getTileUrl(item: PanoramaxItem, col: number, row: number): string | null {
+        const template = item.asset_templates?.tiles?.href;
+        if (!template) { return null; }
+        return template
+            .replace('{TileCol}', String(col))
+            .replace('{TileRow}', String(row));
     }
 }
 

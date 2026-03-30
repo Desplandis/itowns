@@ -3,7 +3,7 @@ import GeometryLayer from 'Layer/GeometryLayer';
 import { Coordinates, OrientationUtils } from '@itowns/geographic';
 import Fetcher from 'Provider/Fetcher';
 import type PanoramicSource from 'Source/PanoramicSource';
-import type { PanoramaxItem } from 'Stac/StacTypes';
+import type { PanoramaxItem, TileMatrix } from 'Stac/StacTypes';
 
 export interface PanoramicLayerOptions {
     /** The panoramic data source (not an iTowns Source). */
@@ -13,6 +13,9 @@ export interface PanoramicLayerOptions {
     /** Radius of the panoramic sphere in metres.  Default 500. */
     backgroundDistance?: number;
 }
+
+/** Maximum number of tile fetches in flight at once. */
+const TILE_CONCURRENCY = 6;
 
 const _qYupToZup = /* @__PURE__ */ new THREE.Quaternion().setFromAxisAngle(
     new THREE.Vector3(1, 0, 0),
@@ -36,6 +39,10 @@ class PanoramicLayer extends GeometryLayer {
 
     sphere: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
     item: PanoramaxItem | null;
+
+    private _view: { notifyChange(target?: unknown): void } | null = null;
+    private _renderer: THREE.WebGLRenderer | null = null;
+    private _maxTextureSize: number = 16384;
 
     constructor(id: string, config: PanoramicLayerOptions) {
         const {
@@ -61,15 +68,25 @@ class PanoramicLayer extends GeometryLayer {
         this.object3d.add(this.sphere);
     }
 
-    async startup(context: { view: { notifyChange(target?: unknown): void } }) {
+    async startup(context: { view: { notifyChange(target?: unknown): void; mainLoop?: { gfxEngine?: { renderer?: THREE.WebGLRenderer } } } }) {
+        this._view = context.view;
+        this._renderer = context.view.mainLoop?.gfxEngine?.renderer ?? null;
+        if (this._renderer) {
+            this._maxTextureSize = this._renderer.capabilities.maxTextureSize;
+        }
+
         this.item = await this.panoramicSource.fetchItem();
 
         this._positionAndOrientSphere(this.item);
-        await this._loadTexture(this.item);
+
+        // Phase 1: load the SD preview so the sphere is visible quickly.
+        await this._loadPreview(this.item);
 
         await super.startup(context as never);
-
         context.view.notifyChange(this);
+
+        // Phase 2: load high-res tiles in the background (fire-and-forget).
+        this._loadTiles(this.item);
     }
 
     // -- internals -----------------------------------------------------------
@@ -125,18 +142,166 @@ class PanoramicLayer extends GeometryLayer {
         this.sphere.updateMatrixWorld();
     }
 
-    private async _loadTexture(item: PanoramaxItem): Promise<void> {
-        const imageUrl = this.panoramicSource.getImageUrl(item);
-        const texture: THREE.Texture = await Fetcher.texture(imageUrl, {
-            crossOrigin: 'anonymous',
-        });
+    private _applyTextureSettings(texture: THREE.Texture): void {
         texture.colorSpace = THREE.SRGBColorSpace;
-        // BackSide renders the inside of the sphere, which mirrors the texture
-        // horizontally.  Flip U to compensate.
         texture.wrapS = THREE.RepeatWrapping;
         texture.repeat.x = -1;
+    }
+
+    /**
+     * Phase 1: load the SD (standard-definition) image and apply it to the
+     * sphere so the user gets immediate visual feedback while tiles load.
+     * Using the `visual` role (2048px) rather than `thumbnail` (500px)
+     * minimises the visible alignment difference with the tiled texture.
+     */
+    private async _loadPreview(item: PanoramaxItem): Promise<void> {
+        const previewUrl = this.panoramicSource.getImageUrl(item, 'visual');
+        const texture: THREE.Texture = await Fetcher.texture(previewUrl, {
+            crossOrigin: 'anonymous',
+        });
+        this._applyTextureSettings(texture);
         this.sphere.material.map = texture;
         this.sphere.material.needsUpdate = true;
+    }
+
+    /**
+     * Phase 2 (fire-and-forget): compose high-res tiles into a
+     * `WebGLRenderTarget` so each tile is uploaded to the GPU exactly once
+     * (~2 MB per 768x768 tile) instead of re-uploading the full canvas on
+     * every tile arrival.
+     *
+     * The thumbnail remains on the sphere while tiles render into the RT in
+     * the background.  Once every tile has been drawn the sphere's texture
+     * is swapped to the RT in one shot.
+     */
+    private _loadTiles(item: PanoramaxItem): void {
+        const renderer = this._renderer;
+        if (!renderer) { return; }
+
+        const tms = this.panoramicSource.getTileMatrixSet(item);
+        if (!tms || tms.tileMatrix.length === 0) { return; }
+
+        const tm: TileMatrix = tms.tileMatrix[0];
+        const { matrixWidth, matrixHeight, tileWidth, tileHeight } = tm;
+
+        let fullWidth = matrixWidth * tileWidth;
+        let fullHeight = matrixHeight * tileHeight;
+
+        const max = this._maxTextureSize;
+        if (fullWidth > max || fullHeight > max) {
+            const scale = max / Math.max(fullWidth, fullHeight);
+            fullWidth = Math.floor(fullWidth * scale);
+            fullHeight = Math.floor(fullHeight * scale);
+        }
+
+        // --- render-target & blit scene setup --------------------------------
+
+        const rt = new THREE.WebGLRenderTarget(fullWidth, fullHeight, {
+            depthBuffer: false,
+            wrapS: THREE.RepeatWrapping,
+            minFilter: THREE.LinearFilter,
+            magFilter: THREE.LinearFilter,
+        });
+        rt.texture.colorSpace = THREE.LinearSRGBColorSpace;
+        rt.texture.repeat.x = -1;
+
+        const orthoCamera = new THREE.OrthographicCamera(
+            0, fullWidth, fullHeight, 0, -1, 1,
+        );
+        const blitScene = new THREE.Scene();
+        const quadGeo = new THREE.PlaneGeometry(1, 1);
+        const quadMat = new THREE.MeshBasicMaterial({
+            depthTest: false,
+            depthWrite: false,
+            toneMapped: false,
+        });
+        const quad = new THREE.Mesh(quadGeo, quadMat);
+        blitScene.add(quad);
+
+        // The thumbnail stays on the sphere while tiles load.  Once all tiles
+        // have been drawn into the RT we swap in one shot — no UV-flip gymnastics.
+
+        const scaledTileW = fullWidth / matrixWidth;
+        const scaledTileH = fullHeight / matrixHeight;
+
+        type TileCoord = { col: number; row: number };
+        const tiles: TileCoord[] = [];
+        for (let row = 0; row < matrixHeight; row++) {
+            for (let col = 0; col < matrixWidth; col++) {
+                tiles.push({ col, row });
+            }
+        }
+
+        let loaded = 0;
+        const total = tiles.length;
+
+        const drawTile = (img: HTMLImageElement, col: number, row: number) => {
+            const tileTex = new THREE.Texture(img);
+            tileTex.colorSpace = THREE.SRGBColorSpace;
+            tileTex.needsUpdate = true;
+
+            quadMat.map = tileTex;
+            quadMat.needsUpdate = true;
+            quad.scale.set(scaledTileW, scaledTileH, 1);
+            quad.position.set(
+                col * scaledTileW + scaledTileW / 2,
+                fullHeight - row * scaledTileH - scaledTileH / 2,
+                0,
+            );
+
+            const prevRT = renderer.getRenderTarget();
+            const prevAutoClear = renderer.autoClear;
+            renderer.autoClear = false;
+            renderer.setRenderTarget(rt);
+            renderer.render(blitScene, orthoCamera);
+            renderer.setRenderTarget(prevRT);
+            renderer.autoClear = prevAutoClear;
+
+            tileTex.dispose();
+
+            loaded++;
+            if (loaded === total) {
+                // All tiles drawn — swap the sphere from thumbnail to RT.
+                const oldTex = this.sphere.material.map;
+                this.sphere.material.map = rt.texture;
+                this.sphere.material.needsUpdate = true;
+                if (oldTex) { oldTex.dispose(); }
+
+                quadGeo.dispose();
+                quadMat.dispose();
+                // eslint-disable-next-line no-console
+                console.log(`PanoramicLayer: all ${total} tiles loaded`);
+            }
+
+            this._view?.notifyChange(this);
+        };
+
+        let cursor = 0;
+        const next = () => {
+            while (cursor < tiles.length) {
+                const { col, row } = tiles[cursor++];
+                const url = this.panoramicSource.getTileUrl(item, col, row);
+                if (!url) { continue; }
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    drawTile(img, col, row);
+                    next();
+                };
+                img.onerror = () => {
+                    // eslint-disable-next-line no-console
+                    console.warn(`PanoramicLayer: failed to load tile ${col},${row}`);
+                    loaded++;
+                    next();
+                };
+                img.src = url;
+                return;
+            }
+        };
+
+        for (let i = 0; i < TILE_CONCURRENCY && i < tiles.length; i++) {
+            next();
+        }
     }
 
     // eslint-disable-next-line
