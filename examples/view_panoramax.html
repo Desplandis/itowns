@@ -1,0 +1,177 @@
+<html>
+    <head>
+        <title>Itowns - Panoramax Single Item</title>
+
+        <script type="importmap">
+        {
+            "imports": {
+                "itowns": "../dist/itowns.js",
+                "debug": "../dist/debug.js",
+                "dat": "https://unpkg.com/dat.gui@0.7.9/build/dat.gui.module.js",
+                "GuiTools": "./jsm/GUI/GuiTools.js",
+                "LoadingScreen": "./jsm/GUI/LoadingScreen.js",
+                "itowns_widgets": "../dist/itowns_widgets.js",
+                "three": "https://unpkg.com/three@0.182.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.182.0/examples/jsm/"
+            }
+        }
+        </script>
+
+        <meta charset="UTF-8">
+        <link rel="stylesheet" type="text/css" href="css/example.css">
+        <link rel="stylesheet" type="text/css" href="css/LoadingScreen.css">
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <div id="viewerDiv"></div>
+        <script type="module">
+
+            import setupLoadingScreen from 'LoadingScreen';
+            import * as itowns from 'itowns';
+            import * as THREE from 'three';
+            import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+
+            // ---- item to display ----
+            // Override via URL params, e.g.:
+            //   ?item=https://api.panoramax.xyz/api/collections/{col}/items/{id}
+            //   &range=50
+            const params = new URLSearchParams(window.location.search);
+
+            const DEFAULT_ITEM_URL =
+                'https://api.panoramax.xyz/api/collections/' +
+                '3caf0f9b-e60f-4111-8b3e-ecba26bd18c5/items/' +
+                'a308cc8a-e975-4a10-bfa0-052908e557ba';
+
+            const ITEM_URL = params.get('item') || DEFAULT_ITEM_URL;
+            const RANGE = parseFloat(params.get('range') ?? '50');
+
+            // ---- view ----
+            const viewerDiv = document.getElementById('viewerDiv');
+
+            // Temporary placement; the camera will be moved to the item's
+            // coordinates once the layer is ready.
+            const placement = {
+                coord: new itowns.Coordinates('EPSG:4326', 0, 0),
+                range: 25000000,
+            };
+
+            const view = new itowns.GlobeView(viewerDiv, placement, {
+                handleCollision: false,
+                sseSubdivisionThreshold: 10,
+                camera: { defaultZoomIn: 0.1, defaultZoomOut: 0.1 },
+            });
+
+            view.controls.minDistance = 1;
+            view.controls.maxDistance = 50000000;
+
+            setupLoadingScreen(viewerDiv, view);
+
+            // ---- base imagery + elevation ----
+            itowns.Fetcher.json('./layers/JSONLayers/Ortho.json').then((config) => {
+                config.source = new itowns.WMTSSource(config.source);
+                view.addLayer(new itowns.ColorLayer('Ortho', config));
+            });
+
+            // ---- panoramic layer ----
+            const panoramicSource = new itowns.PanoramicSource({
+                itemUrl: ITEM_URL,
+            });
+
+            const panoramicLayer = new itowns.PanoramicLayer('panoramax', {
+                panoramicSource,
+                crs: view.referenceCrs,
+                backgroundDistance: 10,
+            });
+
+            view.addLayer(panoramicLayer, view.tileLayer);
+
+            // ---- move camera to item location once ready ----
+            panoramicLayer.whenReady.then((layer) => {
+                const [lon, lat] = layer.item.geometry.coordinates;
+                console.info('PanoramicLayer ready, item at:', lon, lat);
+                itowns.CameraUtils.transformCameraToLookAtTarget(view, view.camera3D, {
+                    coord: new itowns.Coordinates('EPSG:4326', lon, lat),
+                    range: RANGE,
+                });
+                view.notifyChange(view.camera3D);
+            });
+
+            // ---- GUI ----
+            const gui = new GUI();
+            const sphereFolder = gui.addFolder('Panorama item');
+            const guiState = { opacity: 1.0 };
+            sphereFolder.add(guiState, 'opacity', 0, 1, 0.01).onChange((v) => {
+                panoramicLayer.sphere.material.opacity = v;
+                view.notifyChange();
+            });
+
+            // ---- toggle between globe controls and street controls ----
+            const globeControls = view.controls;
+            let streetControls = null;
+            let isStreetMode = false;
+
+            function switchToStreet() {
+                if (!panoramicLayer.item) { return; }
+
+                globeControls.enabled = false;
+
+                if (!streetControls) {
+                    streetControls = new itowns.StreetControls(view, {
+                        animationDuration: 0,
+                    });
+                }
+
+                const spherePos = panoramicLayer.sphere.position;
+                streetControls.setCurrentPosition(spherePos);
+                streetControls.setCameraOnPosition(
+                    spherePos.clone(),
+                    spherePos.clone().add(
+                        panoramicLayer.sphere.getWorldDirection(
+                            new THREE.Vector3(),
+                        ),
+                    ),
+                );
+
+                view.camera3D.near = 0.1;
+                view.camera3D.far = 10000;
+                view.camera3D.fov = 75;
+                view.camera3D.updateProjectionMatrix();
+
+                view.controls = streetControls;
+                streetControls.enabled = true;
+                isStreetMode = true;
+                view.notifyChange(view.camera3D);
+                console.info('Switched to StreetControls (immersive)');
+            }
+
+            function switchToGlobe() {
+                if (streetControls) {
+                    streetControls.enabled = false;
+                }
+                view.controls = globeControls;
+                globeControls.enabled = true;
+
+                view.camera3D.near = 0.25;
+                view.camera3D.far = 10000000;
+                view.camera3D.fov = 50;
+                view.camera3D.updateProjectionMatrix();
+
+                isStreetMode = false;
+                view.notifyChange(view.camera3D);
+                console.info('Switched to GlobeControls (debug)');
+            }
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 't' || e.key === 'T') {
+                    if (isStreetMode) { switchToGlobe(); }
+                    else { switchToStreet(); }
+                }
+            });
+
+            window.view = view;
+            window.itowns = itowns;
+
+        </script>
+    </body>
+</html>

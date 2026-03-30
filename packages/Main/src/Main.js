@@ -65,6 +65,7 @@ export {
 } from 'Layer/OGC3DTilesLayer';
 export { default as TiledGeometryLayer } from 'Layer/TiledGeometryLayer';
 export { default as OrientedImageLayer } from 'Layer/OrientedImageLayer';
+export { default as PanoramicLayer } from 'Layer/PanoramicLayer';
 export { STRATEGY_MIN_NETWORK_TRAFFIC, STRATEGY_GROUP, STRATEGY_PROGRESSIVE, STRATEGY_DICHOTOMY } from 'Layer/LayerUpdateStrategy';
 export { default as ColorLayersOrdering } from 'Renderer/ColorLayersOrdering';
 export { default as GlobeLayer } from 'Core/Prefab/Globe/GlobeLayer';
@@ -86,6 +87,7 @@ export { default as WMSSource } from 'Source/WMSSource';
 export { default as WMTSSource } from 'Source/WMTSSource';
 export { default as VectorTilesSource } from 'Source/VectorTilesSource';
 export { default as OrientedImageSource } from 'Source/OrientedImageSource';
+export { default as PanoramicSource } from 'Source/PanoramicSource';
 export { default as PotreeSource } from 'Source/PotreeSource';
 export { default as Potree2Source } from 'Source/Potree2Source';
 export { default as C3DTilesSource } from 'Source/C3DTilesSource';

@@ -382,7 +382,9 @@ class View extends THREE.EventDispatcher {
             this.scene.add(layer.object3d);
         }
 
-        layer.startup().then(() => {
+        layer.startup({
+            view: this,
+        }).then(() => {
             this.notifyChange(parentLayer || layer, false);
             if (!this._frameRequesters[MAIN_LOOP_EVENTS.UPDATE_END] ||
                 !this._frameRequesters[MAIN_LOOP_EVENTS.UPDATE_END].includes(this._allLayersAreReadyCallback)) {
