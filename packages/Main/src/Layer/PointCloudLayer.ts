@@ -419,11 +419,16 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
      * @returns The child nodes to update or [] if there is none.
      */
     update(context: Context, layer: this, root: PointCloudNode): PointCloudNode[] {
-        const rootWithWeight = { node: root, weight: Infinity };
-        const queue = new TinyQueue([rootWithWeight], (a, b) => b.weight - a.weight);
+        const rootWithWeight = { node: root, weight: Infinity, distance: 0 };
+        const queue = new TinyQueue([rootWithWeight], (a, b) => {
+            if (b.weight === a.weight) {
+                return b.distance - a.distance;
+            }
+            return b.weight - a.weight;
+        });
         let numVisiblePoints = 0;
         while (queue.length > 0 && numVisiblePoints < this.pointBudget) {
-            const { node } = queue.pop() as { node: PointCloudNode };
+            const { node } = queue.pop() as { node: PointCloudNode, distance: number };
             // get object on which to measure distance
             let bbox;
             let object3d;
@@ -471,7 +476,7 @@ abstract class PointCloudLayer<S extends PointCloudSource = PointCloudSource>
             if (node.children && node.children.length) {
                 if (node.sse >= 1) {
                     for (const child of node.children) {
-                        queue.push({ node: child, weight: node.sse });
+                        queue.push({ node: child, weight: node.sse, distance: distanceToCamera });
                     }
                 }
             }
