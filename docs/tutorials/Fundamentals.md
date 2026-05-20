@@ -1,3 +1,8 @@
+---
+title: Fundamentals
+group: Getting started
+---
+
 ITowns is a javascript framework for 3D geographic data visualisation. 
 It can display a wide range of data such as ortho-images, Digital Elevation Models (DEM) or 3D models.
 
@@ -30,9 +35,9 @@ It is important to acknowledge the following facts regarding original raster dat
 - a `GlobeView` allows displaying multiple raster data from two different source CRS : [WGS 84](https://epsg.io/4326) and [Pseudo-Mercator](https://epsg.io/3857),
 - a `PlanarView` allows displaying multiple raster data, but all those data sources must have the same CRS.
 
-&rarr;[**`Visit GlobeView tutorial`**]{@tutorial Raster-data-WGS84}
+&rarr;[**`Visit GlobeView tutorial`**](./Raster-data-WGS84.md)
 
-&rarr;[**`Visit PlanarView tutorial`**]{@tutorial Raster-data-Lambert93}
+&rarr;[**`Visit PlanarView tutorial`**](./Raster-data-Lambert93.md)
 
 ***
 
@@ -119,7 +124,7 @@ In that case, the data basically consist in polygons, lines or points.
 Their appearance can be adjusted by modifying the `{@link Style}` of the `{@link ColorLayer}`. 
 Yet, their positioning can't be modified since it is computed so that tey appear projected on the ground.
 
-&rarr;[**`Visit tutorial`**]{@tutorial Vector-data-on-ground}
+&rarr;[**`Visit tutorial`**](./Vector-data-on-ground.md)
 
 ### Vector data displayed as 3D objects
 
@@ -131,4 +136,4 @@ Two parameters allow modifying the data position :
 
 For example, given a set of polygons, setting `fill.base_altitude` to `500` and `fill.extrusion_height` to `20` will render extruded polygon expanding between 500 and 520 meters of altitude.
 
-&rarr;[**`Visit tutorial`**]{@tutorial Vector-data-3d}
+&rarr;[**`Visit tutorial`**](./Vector-data-3d.md)

@@ -1,0 +1,9 @@
+{
+    "entryPoints": ["src/Main.js"],
+    "exclude": ["**/C3DT*", "**/Geographic/**"],
+    "validation": {
+        "notExported": false,
+        "invalidLink": false,
+        "rewrittenLink": false
+    }
+}

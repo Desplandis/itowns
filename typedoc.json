@@ -1,0 +1,40 @@
+/** @type {import('typedoc').TypeDocOptions} */
+const config = {
+    entryPointStrategy: 'packages',
+    entryPoints: ['packages/Geographic', 'packages/Main'],
+    out: 'docs/out',
+    name: 'iTowns',
+    readme: 'docs/HOMEPAGE.md',
+    projectDocuments: ['docs/tutorials/*.md'],
+    validation: {
+        notExported: false,
+        invalidLink: false,
+        rewrittenLink: false,
+    },
+    packageOptions: {
+        tsconfig: '../../tsconfig.typedoc.json',
+        excludePrivate: true,
+        excludeInternal: true,
+        /*
+        validation: {
+            notExported: false,
+            invalidLink: false,
+            rewrittenLink: false,
+        },
+        */
+        /*
+        categorizeByGroup: true,
+        categoryOrder: [
+            'Base', 'View', 'Geographic',
+            'Layer', 'Points', 'Source', 'Provider',
+            'Parser', 'Converter', 'Controls',
+            'Renderer', 'Plugins', 'Widgets', '*',
+        ],
+        */
+        jsDocCompatibility: true,
+        externalSymbolLinkMappings: {
+        },
+    },
+};
+
+export default config;

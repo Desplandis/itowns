@@ -1153,8 +1153,6 @@ class GlobeControls extends THREE.EventDispatcher {
      * The tilt's interval is between 4 and 89.5 degree
      *
      * @param {CameraTransformOptions|Extent} [params] - camera transformation to apply
-     * @param {number} [params.zoom] - zoom
-     * @param {number} [params.scale] - scale
      * @param {boolean} [isAnimated] - Indicates if animated
      * @returns {Promise} A promise that resolves when transformation is complete
      */

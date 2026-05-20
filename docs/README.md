@@ -11,16 +11,18 @@ tutorials.
 ### API reference
 
 The API reference is written in the source of itowns, using
-[JSDoc](http://usejsdoc.org/), along with support for the
-[Markdown](https://commonmark.org/help/) syntax. This is a
-classic documentation, explaining all exposed methods and classes in itowns, and
-some internal others.
+[JSDoc](http://usejsdoc.org/) comment syntax, and generated with
+[TypeDoc](https://typedoc.org/). [Markdown](https://commonmark.org/help/)
+is supported inside doc comments.
 
-When documenting something, don't forget to check the presence of your file
-inside `docs/config.json`.
+TypeDoc reads type information directly from TypeScript (and JavaScript files
+via `allowJs`), so `@param` and `@returns` tags do not need explicit types in
+`.ts` files. For `.js` files, types in JSDoc tags are still picked up by the
+TypeScript compiler.
 
-If the file you are editing is not present, add it to the `navigation` list, in
-the correct package.
+Use `@category` tags to place symbols into the correct navigation group (Base,
+View, Layer, Source, etc.). See `typedoc.config.mjs` at the repo root for the
+full `categoryOrder` list.
 
 #### How to document a class
 
@@ -28,26 +30,24 @@ A typical class should have the following documenting parts:
 
 ```js
 /**
- * @classdesc
  * The description of the class.
  *
- * @property {type} prop - Description of a property of the class.
- * @property {type} prop2 - Description of another property of the class.
+ * @category Layer
  */
 class AClass {
+    /** Description of a property. */
+    prop;
+
     /**
-     * @param - Description of the parameter.
-     *
-     * @constructor
+     * @param param - Description of the parameter.
      */
-    constructor() {}
+    constructor(param) {}
 
     /**
      * Description and explanation of the method.
      *
-     * @param {type} param - Description of the parameter.
-     *
-     * @return {type} The returned value.
+     * @param param - Description of the parameter.
+     * @returns The returned value.
      */
     method() {}
 }
@@ -58,17 +58,23 @@ pull request.
 
 ### Tutorials
 
-Tutorials don't use JSDoc, but rather
-[Markdown](https://daringfireball.net/projects/markdown/). Note that some JSDoc
-tags are still working inside Markdown in our case.
+Tutorials are Markdown files stored in `docs/tutorials/`. They are included
+in the generated docs via TypeDoc's `projectDocuments` option.
 
-When adding a tutorial, also add it in `docs/tutorials/list.json`, and following
-the already present tutorials, add a name to it.
+Each tutorial file must start with YAML frontmatter specifying its title and
+group:
 
-You will also need to specify the section of your tutorial in `docs/config.json`, 
-at the `tutorialSections` property. You can add a new section as long as the 
-`sectionTitle` and `sectionId` parameters you set for your tutorial are different 
-from the ones that are already present.
+```markdown
+---
+title: My Tutorial
+group: Getting started
+---
+
+Tutorial content here...
+```
+
+Cross-references to API symbols use `{@link ClassName}` syntax. Links between
+tutorials use standard Markdown links: `[text](./OtherTutorial.md)`.
 
 If you want to add images to the tutorial, add them inside
 `docs/tutorials/images`, and name under `$TUTORIAL_NAME_xxx`, `$TUTORIAL_NAME`
@@ -84,30 +90,12 @@ run this command:
 npm run doc
 ```
 
-The generation process should take less than 5 seconds, and result in the
-creation of a `out/` folder in `docs/`.
+The generation process results in the creation of a `out/` folder in `docs/`.
 
 ## Consulting the documentation locally
 
-The documentation can't be viewed without a server, as it uses `XHR` requests to
-make the link between the navigation and the content.
+If you have `npm start` running, you can browse the documentation at
+`http://localhost:8080/docs/out/`.
 
-If you have `npm start`
-running, you can browse the documentation at `http://localhost:8080/docs/out/`.
-
-Otherwise, if you have another server running that can serve the itowns
-directory, you can go in `$YOUR_SERVER/$ITOWNS_PATH/docs/out` and it should be
-here, with `$YOUR_SERVER` and `$ITOWNS_PATH` to replace by a working value given
-your configuration.
-
-## Modifying the template
-
-If you wish to modify the current template, there are multiple things to change:
-
-- `docs/static/styles/` contains the CSS styles of the template
-- `docs/tmpl/` contains the templates of each part
-- `publish.js` and `templateHelper.js` define the generation process of the
-  documentation from the template
-
-The architecture of the template follows roughly [the one from
-JSDoc](https://github.com/jsdoc/jsdoc/tree/master/packages/jsdoc/templates/default).
+Otherwise, open `docs/out/index.html` directly in a browser, or serve it with
+any static file server.

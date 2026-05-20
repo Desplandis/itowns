@@ -78,12 +78,8 @@ class ColorLayer extends RasterLayer {
      * If set, a new `LabelLayer` is added and attached to this layer.
      * You can also configure it with {@link LabelLayer} options described below
      * such as: `addLabelLayer: { performance: true }`.
-     * @param {boolean} [config.addLabelLayer.performance=false] - When adding
-     * a label layer, remove all labels that have no chance of being visible.
-     * Even if a label is visible, it may never be displayed if there are too
-     * many labels in the same screen area.
-     * @param {boolean} [config.addLabelLayer.forceClampToTerrain=false] - Use
-     * elevation layer to clamp labels to terrain.
+     * `performance` removes labels with no chance of being visible.
+     * `forceClampToTerrain` uses elevation layer to clamp labels to terrain.
      *
      * @example
      * // Create a ColorLayer

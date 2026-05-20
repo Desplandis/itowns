@@ -81,16 +81,14 @@ class CopcSource extends Source {
     header!: Las.Header;
     /**
      * COPC `info` VLR.
-     * @param cube - Bounding box of the octree as a 6-elements.
-     * tuple `[minX, minY, minZ, maxX, maxY, maxZ]`. Computed from `center_x`,
-     * `center_y`, `center_z` and `halfSize` properties.
-     * @param rootHierarchyPage - Hierarchy page of the root node.
-     * @remarks rootHierarchyPage.pageOffset - Absolute Offset to the
-     * root node data chunk.
-     * @remarks rootHierarchyPage.pageLength - Size (in bytes) of the
-     * root node data chunk.
-     * @param gpsTimeRange - A 2-element tuple denoting the
-     * minimum and maximum values of attribute `gpsTime`.
+     * - `cube` - Bounding box of the octree as a 6-elements
+     *   tuple `[minX, minY, minZ, maxX, maxY, maxZ]`. Computed from `center_x`,
+     *   `center_y`, `center_z` and `halfSize` properties.
+     * - `rootHierarchyPage` - Hierarchy page of the root node.
+     *   `rootHierarchyPage.pageOffset` - Absolute Offset to the root node data chunk.
+     *   `rootHierarchyPage.pageLength` - Size (in bytes) of the root node data chunk.
+     * - `gpsTimeRange` - A 2-element tuple denoting the
+     *   minimum and maximum values of attribute `gpsTime`.
      */
     info!: Info;
     /** List of headers of each Variable Length Records (VLRs). */
