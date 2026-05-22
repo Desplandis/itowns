@@ -186,6 +186,22 @@ class Layer extends THREE.EventDispatcher {
      * @returns {Promise<void>}
      */
     async startup(/* context */) {
+        const parent = this.parent;
+        if (parent && !this.extent) {
+            this.extent = parent.extent;
+            if (this.source && !this.source.extent) {
+                this.source.extent = parent.extent;
+            }
+        }
+
+        if (!this.crs && parent) {
+            if (parent.tileMatrixSets?.includes(this.source.crs)) {
+                this.crs = this.source.crs;
+            } else {
+                this.crs = parent.extent?.crs;
+            }
+        }
+
         try {
             await Promise.all(this._promises);
             this._resolve();

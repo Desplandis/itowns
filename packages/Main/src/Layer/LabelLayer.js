@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import LayerUpdateState from 'Layer/LayerUpdateState';
 import ObjectRemovalHelper from 'Process/ObjectRemovalHelper';
+import Layer from 'Layer/Layer';
 import GeometryLayer from 'Layer/GeometryLayer';
 import { Coordinates, Extent } from '@itowns/geographic';
 import Label from 'Core/Label';
@@ -219,6 +220,11 @@ class LabelLayer extends GeometryLayer {
         } else {
             this.domElement?.hide();
         }
+    }
+
+    async startup(context) {
+        context.engine.label2dRenderer.registerLayer(this);
+        return Layer.prototype.startup.call(this, context); // bypass GeometryLayer
     }
 
     get submittedLabelNodes() {

@@ -185,6 +185,11 @@ class GeometryLayer extends Layer {
     // Placeholder
     postUpdate() { }
 
+    async startup(context) {
+        this.crs = context.view.referenceCrs;
+        return super.startup(context);
+    }
+
     // Placeholder
     culling() {
         return true;

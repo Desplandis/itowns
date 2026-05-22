@@ -39,37 +39,9 @@ export const VIEW_EVENTS = {
  * @property {string} type  dblclick-right
  */
 
-function _preprocessLayer(view, layer, parentLayer) {
+function _preprocessLayer(view, layer) {
     const source = layer.source;
-    if (parentLayer && !layer.extent) {
-        layer.extent = parentLayer.extent;
-        if (source && !source.extent) {
-            source.extent = parentLayer.extent;
-        }
-    }
-
-    if (layer.isGeometryLayer && !layer.isLabelLayer) {
-        // Find crs projection layer, this is projection destination
-        layer.crs = view.referenceCrs;
-    } else if (!layer.crs) {
-        if (parentLayer && parentLayer.tileMatrixSets && parentLayer.tileMatrixSets.includes(source.crs)) {
-            layer.crs = source.crs;
-        } else {
-            layer.crs = parentLayer && parentLayer.extent.crs;
-        }
-    }
-
-    if (layer.isLabelLayer) {
-        view.mainLoop.gfxEngine.label2dRenderer.registerLayer(layer);
-    } else if (layer.labelEnabled || layer.addLabelLayer) {
-        if (layer.labelEnabled) {
-            // eslint-disable-next-line no-console
-            console.info('layer.labelEnabled is deprecated use addLabelLayer, instead of');
-        }
-        // Because the features are shared between layer and labelLayer.
-        layer.buildExtent = true;
-        // label layer needs 3d data structure.
-        layer.structure = '3d';
+    if (layer.addLabelLayer) {
         const labelLayer = new LabelLayer(`${layer.id}-label`, {
             source,
             style: layer.style,
@@ -100,12 +72,9 @@ function _preprocessLayer(view, layer, parentLayer) {
         });
     }
 
-    if (layer.isOGC3DTilesLayer) {
-        layer._setup(view);
-    }
-
     return layer;
 }
+
 const _eventCoords = new THREE.Vector2();
 const matrix = new THREE.Matrix4();
 const screen = new THREE.Vector2();
@@ -361,7 +330,7 @@ class View extends THREE.EventDispatcher {
             return layer._reject(new Error(`Invalid id '${layer.id}': id already used`));
         }
 
-        layer = _preprocessLayer(this, layer, parentLayer);
+        layer = _preprocessLayer(this, layer);
 
         if (parentLayer) {
             if (layer.isColorLayer) {
@@ -384,7 +353,11 @@ class View extends THREE.EventDispatcher {
             this.scene.add(layer.object3d);
         }
 
-        layer.startup().then(() => {
+        layer.startup({
+            camera: this.camera,
+            engine: this.mainLoop.gfxEngine,
+            view: this,
+        }).then(() => {
             this.notifyChange(parentLayer || layer, false);
             if (!this._frameRequesters[MAIN_LOOP_EVENTS.UPDATE_END] ||
                 !this._frameRequesters[MAIN_LOOP_EVENTS.UPDATE_END].includes(this._allLayersAreReadyCallback)) {

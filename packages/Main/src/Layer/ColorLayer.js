@@ -155,6 +155,23 @@ class ColorLayer extends RasterLayer {
         this.mergeFeatures = mergeFeatures;
     }
 
+    async startup(context) {
+        // The companion label layer makes assumptions on the features, namely:
+        // - 3D components for positioning (see LabelLayer#convert) as they are
+        //   used in combination with matrixWorld to compute the world-space
+        //   position of the labels.
+        // - Extent for spatial filtering (see LabelLayer#convert) since those
+        //   extents are used to cull labels outside the current tile.
+        // Because both layers share the same source cache, these options must
+        // be synced here so features are parsed consistently.
+        if (this.addLabelLayer) {
+            this.buildExtent = true;
+            this.structure = '3d';
+        }
+
+        return super.startup(context);
+    }
+
     /**
      * Setup RasterColorTile added to TileMesh. This RasterColorTile handles
      * the ColorLayer textures mapped on this TileMesh.

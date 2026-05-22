@@ -510,10 +510,11 @@ class OGC3DTilesLayer extends GeometryLayer {
     /**
      * Setup 3D tiles renderer js TilesRenderer with the camera, binds events and start updating. Executed when the
      * layer has been added to the view.
-     * @param {View} view - the view the layer has been added to.
-     * @private
+     * @param {Context} context - the context of the layer.
+     * @returns {Promise<void>}
      */
-    _setup(view) {
+    startup(context) {
+        const { view } = context;
         this.tilesRenderer.setCamera(view.camera3D);
         this.tilesRenderer.setResolutionFromRenderer(view.camera3D, view.renderer);
         // Setup whenReady to be fullfiled when the root tileset has been loaded
@@ -539,6 +540,8 @@ class OGC3DTilesLayer extends GeometryLayer {
 
         // Start loading tileset and tiles
         this.tilesRenderer.update();
+
+        return super.startup(context);
     }
 
     /**
