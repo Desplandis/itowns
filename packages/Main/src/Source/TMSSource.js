@@ -98,7 +98,7 @@ class TMSSource extends Source {
     }
 
     urlFromExtent(tile) {
-        return URLBuilder.xyz(tile, this);
+        return URLBuilder.subDomains(URLBuilder.xyz(tile, this));
     }
 
     hasData(tile) {

@@ -156,7 +156,9 @@ class VectorTilesSource extends TMSSource {
     }
 
     urlFromExtent(tile, url) {
-        return URLBuilder.xyz(tile, { tileMatrixCallback: this.tileMatrixCallback, url });
+        return URLBuilder.subDomains(
+            URLBuilder.xyz(tile, { tileMatrixCallback: this.tileMatrixCallback, url }),
+        );
     }
 
     onLayerAdded(options) {

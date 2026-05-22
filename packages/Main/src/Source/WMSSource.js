@@ -169,7 +169,7 @@ class WMSSource extends Source {
         const extent = extentOrTile.isExtent ?
             extentOrTile.as(this.crs, _extent) :
             extentOrTile.toExtent(this.crs, _extent);
-        return URLBuilder.bbox(extent, this);
+        return URLBuilder.subDomains(URLBuilder.bbox(extent, this));
     }
 }
 

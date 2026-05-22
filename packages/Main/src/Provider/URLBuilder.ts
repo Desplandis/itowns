@@ -1,10 +1,31 @@
+interface TileLike {
+    row: number;
+    col: number;
+    zoom: number;
+}
+
+interface TileSourceLike {
+    url: string;
+    tileMatrixCallback: (zoom: number) => string;
+}
+
+interface BboxLike {
+    west: number;
+    south: number;
+    east: number;
+    north: number;
+}
+
+interface BboxSourceLike {
+    crs: string;
+    bboxDigits?: number;
+    url: string;
+    axisOrder?: string;
+}
+
 let subDomainsCount = 0;
 
-/**
- * @param {string} url
- * @returns {string}
- */
-function subDomains(url) {
+function subDomains(url: string): string {
     const subDomainsPtrn = /\$\{u:([\w-_.|]+)\}/.exec(url);
 
     if (!subDomainsPtrn) {
@@ -24,8 +45,6 @@ function subDomains(url) {
  * `${u:a|b|c}` pattern, by separating differents options using `|`. It will go
  * through the following alternative each time (no random). For example
  * `https://${u:xyz.org|yzx.org|zxy.org}/${z}/${x}/${y}.png`
- *
- * @module URLBuilder
  */
 export default {
     subDomains,
@@ -57,20 +76,14 @@ export default {
      * // The resulting url is:
      * // http://server.geo/tms/15/2142/3412.jpg;
      *
-     * @param {object} coords - tile coordinates
-     * @param {number} coords.row - tile row
-     * @param {number} coords.col - tile column
-     * @param {number} coords.zoom - tile zoom
-     * @param {object} source
-     * @param {string} source.url
-     * @param {Function} source.tileMatrixCallback
-     *
-     * @returns {string} the formed url
+     * @param coords - tile coordinates
+     * @param source - tile source
+     * @returns the formed url
      */
-    xyz: function xyz(coords, source) {
-        return subDomains(source.url.replace(/(\$\{z\}|%TILEMATRIX)/, source.tileMatrixCallback(coords.zoom))
-            .replace(/(\$\{y\}|%ROW)/, coords.row)
-            .replace(/(\$\{x\}|%COL)/, coords.col));
+    xyz: function xyz(coords: TileLike, source: TileSourceLike): string {
+        return source.url.replace(/(\$\{z\}|%TILEMATRIX)/, source.tileMatrixCallback(coords.zoom))
+            .replace(/(\$\{y\}|%ROW)/, coords.row.toString())
+            .replace(/(\$\{x\}|%COL)/, coords.col.toString());
     },
 
     /**
@@ -93,20 +106,11 @@ export default {
      * // The resulting url is:
      * // http://server.geo/wms/BBOX=12,35,14,46&FORMAT=jpg&SERVICE=WMS
      *
-     * @param {object} bbox - the bounding box
-     * @param {number} bbox.west
-     * @param {number} bbox.south
-     * @param {number} bbox.east
-     * @param {number} bbox.north
-     * @param {object} source - the source of data
-     * @param {string} source.crs
-     * @param {number} source.bboxDigits
-     * @param {string} source.url
-     * @param {string} source.axisOrder
-     *
-     * @returns {string} the formed url
+     * @param bbox - the bounding box
+     * @param source - the source of data
+     * @returns the formed url
      */
-    bbox: function bbox(bbox, source) {
+    bbox: function bbox(bbox: BboxLike, source: BboxSourceLike): string {
         let precision = source.crs == 'EPSG:4326' ? 9 : 2;
         if (source.bboxDigits !== undefined) {
             precision = source.bboxDigits;
@@ -123,6 +127,6 @@ export default {
             .replace('n', `${n},`)
             .slice(0, -1);
 
-        return subDomains(source.url.replace('%bbox', bboxInUnit));
+        return source.url.replace('%bbox', bboxInUnit);
     },
 };
