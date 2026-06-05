@@ -1,0 +1,13 @@
+{
+    "extends": "./tsconfig-base.json",
+    "compilerOptions": {
+        "noEmit": true,
+        "composite": false,
+        "checkJs": false,
+        "paths": {
+            "@itowns/geographic": ["packages/Geographic/src/index.ts"],
+            "itowns": ["packages/Main/src/Main.js"]
+        }
+    },
+    "include": ["examples/jsm/OGCClientHelper.js"]
+}
