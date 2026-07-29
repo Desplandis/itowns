@@ -1,6 +1,7 @@
 // @ts-check
 import * as itowns from 'itowns';
 import {
+    basicAuthOptions,
     endpointFromUrl,
     listLayers,
     sourceFromEndpoint,
@@ -10,6 +11,7 @@ import {
 
 /** @typedef {import('./jsm/OGCClientHelper.js').Endpoint} Endpoint */
 /** @typedef {import('./jsm/OGCClientHelper.js').LayerDescriptor} LayerDescriptor */
+/** @typedef {import('@camptocamp/ogc-client').FetchOptions} FetchOptions */
 
 /**
  * @template {keyof HTMLElementTagNameMap} T
@@ -32,11 +34,12 @@ function el(tag, props = {}, ...children) {
  * @param {object} props
  * @param {Endpoint} props.endpoint
  * @param {string} props.name
+ * @param {FetchOptions} [props.networkOptions]
  * @returns {Promise<itowns.ColorLayer>}
  */
-async function addLayer(view, { endpoint, name }) {
+async function addLayer(view, { endpoint, name, networkOptions }) {
     const layerId = `${name}_${crypto.randomUUID()}`;
-    const { source, layerType } = sourceFromEndpoint(endpoint, name);
+    const { source, layerType } = sourceFromEndpoint(endpoint, name, networkOptions);
 
     /** @type {itowns.ColorLayer} */
     let layer;
@@ -153,6 +156,8 @@ const viewerDiv = /** @type {HTMLDivElement} */ (document.getElementById('viewer
 const state = {
     /** @type {Endpoint | null} */
     endpoint: null,
+    /** @type {FetchOptions | undefined} */
+    networkOptions: undefined,
     /** @type {itowns.GlobeView} */
     view: new itowns.GlobeView(viewerDiv, {
         coord: new itowns.Coordinates('EPSG:4326', 2.351323, 48.856712),
@@ -165,6 +170,8 @@ const state = {
 const toolbox = /** @type {HTMLFormElement} */ (document.getElementById('toolbox'));
 const ogcURL = /** @type {HTMLInputElement} */ (document.getElementById('ogc-url'));
 const ogcSelect = /** @type {HTMLSelectElement} */ (document.getElementById('ogc-type'));
+const ogcUsername = /** @type {HTMLInputElement} */ (document.getElementById('ogc-username'));
+const ogcPassword = /** @type {HTMLInputElement} */ (document.getElementById('ogc-password'));
 const ogcStatus = /** @type {HTMLOutputElement} */ (document.getElementById('ogc-status'));
 const layerPicker = /** @type {HTMLFieldSetElement} */ (document.getElementById('layer-picker'));
 const layerPickerCount = /** @type {HTMLOutputElement} */ (document.getElementById('layer-count'));
@@ -206,8 +213,13 @@ toolbox.addEventListener('submit', async (event) => {
     layerPickerSearch.value = '';
 
     try {
-        const endpoint = await endpointFromUrl(ogcURL.value.trim(), type);
+        const networkOptions = basicAuthOptions(
+            ogcUsername.value.trim(),
+            ogcPassword.value,
+        );
+        const endpoint = await endpointFromUrl(ogcURL.value.trim(), type, networkOptions);
         state.endpoint = endpoint;
+        state.networkOptions = networkOptions;
         ogcStatus.textContent = endpoint.getServiceInfo()?.title;
 
         const layers = listLayers(endpoint);
@@ -238,14 +250,14 @@ layerPickerSearch.addEventListener('input', () => {
 });
 
 layerAddButton.addEventListener('click', async () => {
-    const { endpoint, view } = state;
+    const { endpoint, view, networkOptions } = state;
     if (!endpoint) {
         return;
     }
 
     for (const name of getCheckedNames()) {
         try {
-            const layer = await addLayer(view, { endpoint, name });
+            const layer = await addLayer(view, { endpoint, name, networkOptions });
             activeLayersList.append(itownsLayerItem({
                 layer,
                 onMove(direction) {

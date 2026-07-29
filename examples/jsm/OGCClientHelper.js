@@ -1,9 +1,16 @@
 // @ts-check
-import { WmtsEndpoint, WmsEndpoint, WfsEndpoint } from '@camptocamp/ogc-client';
-import { Extent, WFSSource, WMSSource, WMTSSource } from 'itowns';
+import {
+    WmtsEndpoint,
+    WmsEndpoint,
+    WfsEndpoint,
+    setFetchOptions,
+    resetFetchOptions,
+} from '@camptocamp/ogc-client';
+import { Extent, Fetcher, WFSSource, WMSSource, WMTSSource } from 'itowns';
 
 /** @typedef {WmtsEndpoint | WmsEndpoint | WfsEndpoint} Endpoint */
 /** @typedef {import('@camptocamp/ogc-client').BoundingBox} BoundingBox */
+/** @typedef {import('@camptocamp/ogc-client').FetchOptions} FetchOptions */
 /** @typedef {import('@camptocamp/ogc-client').WfsFeatureTypeSummary} WfsFeatureType */
 /** @typedef {import('@camptocamp/ogc-client').WmsLayerFull} WmsLayer */
 /** @typedef {import('@camptocamp/ogc-client').WmtsLayer} WmtsLayer */
@@ -14,6 +21,82 @@ import { Extent, WFSSource, WMSSource, WMTSSource } from 'itowns';
  * @property {WMTSSource | WMSSource | WFSSource} source
  * @property {'color' | 'elevation'} layerType
  */
+
+/**
+ * Build fetch / network options for HTTP Basic authentication.
+ *br
+ * @param {string} [username]
+ * @param {string} [password]
+ * @returns {FetchOptions | undefined}
+ */
+export function basicAuthOptions(username, password) {
+    if (!username) {
+        return;
+    }
+
+    return {
+        headers: {
+            Authorization: `Basic ${btoa(`${username}:${password ?? ''}`)}`,
+        },
+    };
+}
+
+/**
+ * Texture fetcher that honors fetch headers (unlike THREE.TextureLoader).
+ * Used for authenticated raster tile requests.
+ *
+ * @param {string} url
+ * @param {RequestInit} [options]
+ * @returns {Promise<import('three').Texture>}
+ */
+function textureFromFetch(url, options = {}) {
+    return fetch(url, options)
+        .then((response) => {
+            if (!response.ok) {
+                /** @type {Error & { response?: Response }} */
+                const error = new Error(response.url, { cause: `status ${response.status}` });
+                error.name = 'FetchError';
+                error.response = response;
+                throw error;
+            }
+            return response.blob();
+        })
+        .then((blob) => {
+            const objectUrl = URL.createObjectURL(blob);
+            return Fetcher.texture(objectUrl, { crossOrigin: 'anonymous' })
+                .finally(() => URL.revokeObjectURL(objectUrl));
+        });
+}
+
+/**
+ * @param {RequestInit} [networkOptions]
+ * @returns {RequestInit | undefined}
+ */
+function sourceNetworkOptions(networkOptions) {
+    if (!networkOptions) {
+        return;
+    }
+    return {
+        crossOrigin: 'anonymous',
+        ...networkOptions,
+    };
+}
+
+/**
+ * @param {RequestInit} [networkOptions]
+ * @returns {{ networkOptions?: RequestInit, fetcher?: typeof textureFromFetch }}
+ */
+function rasterSourceAuth(networkOptions) {
+    const options = sourceNetworkOptions(networkOptions);
+    if (!options) {
+        return {};
+    }
+    return {
+        networkOptions: options,
+        // TextureLoader cannot send Authorization headers
+        fetcher: textureFromFetch,
+    };
+}
 
 const SUPPORTED_CRS = ['EPSG:3857', 'EPSG:4326'];
 const RASTER_FORMATS = ['image/png', 'image/jpeg'];
@@ -110,9 +193,17 @@ export function getZoom(layer) {
  *
  * @param {string} url
  * @param {'wmts' | 'wms' | 'wfs'} type
+ * @param {FetchOptions} [fetchOptions] - Optional fetch options (e.g. Basic
+ * auth headers) applied to all ogc-client requests for this connection.
  * @returns {Promise<Endpoint>}
  */
-export function endpointFromUrl(url, type) {
+export function endpointFromUrl(url, type, fetchOptions) {
+    if (fetchOptions) {
+        setFetchOptions(fetchOptions);
+    } else {
+        resetFetchOptions();
+    }
+
     switch (type) {
         case 'wmts':
             return new WmtsEndpoint(url).isReady();
@@ -154,9 +245,10 @@ export function listLayers(endpoint) {
 /**
  * @param {WmtsEndpoint} endpoint
  * @param {string} name
+ * @param {RequestInit} [networkOptions]
  * @returns {LayerSource}
  */
-function wmtsSource(endpoint, name) {
+function wmtsSource(endpoint, name, networkOptions) {
     const layer = endpoint.getLayerByName(name);
     if (!layer) {
         throw new Error(`WMTS layer "${name}" not found in capabilities`);
@@ -188,6 +280,7 @@ function wmtsSource(endpoint, name) {
             tileMatrixSetLimits: matrixSet.limits?.length
                 ? tileMatrixSetLimits(matrixSet.limits)
                 : undefined,
+            ...rasterSourceAuth(networkOptions),
         }),
         layerType: 'color',
     };
@@ -196,9 +289,10 @@ function wmtsSource(endpoint, name) {
 /**
  * @param {WmsEndpoint} endpoint
  * @param {string} name
+ * @param {RequestInit} [networkOptions]
  * @returns {LayerSource}
  */
-function wmsSource(endpoint, name) {
+function wmsSource(endpoint, name, networkOptions) {
     const layer = endpoint.getLayerByName(name);
     if (!layer) {
         throw new Error(`WMS layer "${name}" not found in capabilities`);
@@ -232,6 +326,7 @@ function wmsSource(endpoint, name) {
             version: endpoint.getVersion(),
             // Note: keep those parameters until we have saner defaults
             transparent: true,
+            ...rasterSourceAuth(networkOptions),
         }),
         layerType: 'color',
     };
@@ -240,9 +335,10 @@ function wmsSource(endpoint, name) {
 /**
  * @param {WfsEndpoint} endpoint
  * @param {string} name
+ * @param {RequestInit} [networkOptions]
  * @returns {LayerSource}
  */
-function wfsSource(endpoint, name) {
+function wfsSource(endpoint, name, networkOptions) {
     const featureType = endpoint.getFeatureTypeSummary(name);
     if (!featureType) {
         throw new Error(`WFS feature type "${name}" not found in capabilities`);
@@ -274,6 +370,7 @@ function wfsSource(endpoint, name) {
             format,
             version: endpoint.getVersion(),
             extent,
+            networkOptions: sourceNetworkOptions(networkOptions),
         }),
         layerType: 'color',
     };
@@ -285,17 +382,19 @@ function wfsSource(endpoint, name) {
  *
  * @param {Endpoint} endpoint
  * @param {string} layerName
+ * @param {RequestInit} [networkOptions] - Optional fetch options forwarded to
+ * the iTowns source (e.g. Basic auth headers for private endpoints).
  * @returns {LayerSource}
  */
-export function sourceFromEndpoint(endpoint, layerName) {
+export function sourceFromEndpoint(endpoint, layerName, networkOptions) {
     if (endpoint instanceof WmtsEndpoint) {
-        return wmtsSource(endpoint, layerName);
+        return wmtsSource(endpoint, layerName, networkOptions);
     }
     if (endpoint instanceof WmsEndpoint) {
-        return wmsSource(endpoint, layerName);
+        return wmsSource(endpoint, layerName, networkOptions);
     }
     if (endpoint instanceof WfsEndpoint) {
-        return wfsSource(endpoint, layerName);
+        return wfsSource(endpoint, layerName, networkOptions);
     }
     throw new Error('Unsupported OGC endpoint');
 }
