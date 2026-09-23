@@ -7,7 +7,6 @@ import {
     type WebGLRenderer,
     type WebGLRenderTarget,
 } from 'three';
-// eslint-disable-next-line
 import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { EDLShader } from './EDLShader';
 
@@ -60,6 +59,7 @@ class EDLPass extends Pass {
     ) {
         super();
 
+        /* eslint-disable jsdoc/check-tag-names */
         /**
          * The width of the render target.
          * @defaultValue 256
